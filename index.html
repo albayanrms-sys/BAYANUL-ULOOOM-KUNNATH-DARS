@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Institution Admission Form</title>
+    <meta name="description" content="Official admission form for the institution. Submit your details to apply.">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="background-overlay"></div>
+    <div class="container">
+        <header class="header">
+            <div class="logo-container">
+                <img src="logo.png" alt="Institution Logo" class="form-logo">
+            </div>
+            <h1>Admission Form</h1>
+            <p>Join our prestigious institution by filling out the details below.</p>
+        </header>
+
+        <form id="admissionForm" class="admission-form">
+            <div class="form-group slide-in">
+                <label for="studentName">Student's Full Name</label>
+                <input type="text" id="studentName" name="studentName" placeholder="Enter full name" required>
+            </div>
+
+            <div class="form-group slide-in" style="animation-delay: 0.1s;">
+                <label for="fatherName">Father's Name</label>
+                <input type="text" id="fatherName" name="fatherName" placeholder="Enter father's name" required>
+            </div>
+
+            <div class="form-group slide-in" style="animation-delay: 0.2s;">
+                <label for="mobileNumber">Mobile Number</label>
+                <input type="tel" id="mobileNumber" name="mobileNumber" placeholder="Enter 10-digit mobile number"
+                    pattern="[0-9]{10}" required title="Please enter a valid 10-digit mobile number">
+            </div>
+
+            <div class="form-group slide-in" style="animation-delay: 0.3s;">
+                <label for="address">Address</label>
+                <textarea id="address" name="address" rows="4" placeholder="Enter residential address"
+                    required></textarea>
+            </div>
+
+            <button type="submit" class="submit-btn slide-in" style="animation-delay: 0.4s;">
+                <span>Submit Application</span>
+                <div class="btn-glow"></div>
+            </button>
+        </form>
+
+        <div id="successMessage" class="success-message hidden">
+            <div class="success-icon">✓</div>
+            <h2>Application Submitted!</h2>
+            <p>Thank you for applying. We will contact you soon.</p>
+            <button onclick="resetForm()" class="secondary-btn">New Application</button>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+
+</html>
