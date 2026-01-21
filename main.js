@@ -3,47 +3,65 @@ document.addEventListener('DOMContentLoaded', () => {
     const successMessage = document.getElementById('successMessage');
     const container = document.querySelector('.container');
 
-    admissionForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    let submitted = false;
+    const hiddenIframe = document.getElementById('hidden_iframe');
+
+    admissionForm.addEventListener('submit', (e) => {
+        // We do NOT preventDefault() so the form submits to the iframe
+        submitted = true;
 
         // Show loading state on button
         const submitBtn = admissionForm.querySelector('.submit-btn');
-        const originalBtnText = submitBtn.innerHTML;
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span>Submitting...</span>';
-
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Get form data
-        const formData = new FormData(admissionForm);
-        const data = Object.fromEntries(formData.entries());
-        data.timestamp = new Date().toISOString();
-
-        // Persist to LocalStorage
-        const submissions = JSON.parse(localStorage.getItem('admissions') || '[]');
-        submissions.push(data);
-        localStorage.setItem('admissions', JSON.stringify(submissions));
-
-        console.log('Application saved:', data);
-
-        // Transition to success state
-        admissionForm.classList.add('hidden');
-        successMessage.classList.remove('hidden');
 
         // Update header if visible
         const header = document.querySelector('.header');
         if (header) header.style.opacity = '0.5';
     });
+
+    const successOverlay = document.getElementById('successOverlay');
+
+    hiddenIframe.onload = () => {
+        if (submitted) {
+            // Show success popup
+            successOverlay.classList.remove('hidden');
+            setTimeout(() => {
+                successOverlay.classList.add('active');
+            }, 10); // Small delay to allow CSS transition
+
+            // Reset button state
+            const submitBtn = admissionForm.querySelector('.submit-btn');
+            submitBtn.innerHTML = '<span>Submitted</span>';
+
+            console.log('Google Form response received.');
+        }
+    };
 });
 
 function resetForm() {
     const admissionForm = document.getElementById('admissionForm');
-    const successMessage = document.getElementById('successMessage');
+    const successOverlay = document.getElementById('successOverlay');
     const header = document.querySelector('.header');
+    const submitBtn = admissionForm.querySelector('.submit-btn');
 
+    // Close popup
+    successOverlay.classList.remove('active');
+    setTimeout(() => {
+        successOverlay.classList.add('hidden');
+    }, 400); // Wait for transition
+
+    // Reset form
     admissionForm.reset();
-    admissionForm.classList.remove('hidden');
-    successMessage.classList.add('hidden');
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<span>Submit Application</span>';
+    submitBtn.appendChild(createGlowElement()); // Re-add glow effect element if it was lost, or just reset text
+
     if (header) header.style.opacity = '1';
+}
+
+function createGlowElement() {
+    const div = document.createElement('div');
+    div.className = 'btn-glow';
+    return div;
 }

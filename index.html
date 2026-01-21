@@ -21,26 +21,29 @@
             <p>Join our prestigious institution by filling out the details below.</p>
         </header>
 
-        <form id="admissionForm" class="admission-form">
+        <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+        <form id="admissionForm" class="admission-form"
+            action="https://docs.google.com/forms/u/0/d/e/1FAIpQLSexYs6yZUGc-UMfvc_czfo8AtEpUAZIjKQENBUAZ3nrTobLSQ/formResponse"
+            method="POST" target="hidden_iframe">
             <div class="form-group slide-in">
                 <label for="studentName">Student's Full Name</label>
-                <input type="text" id="studentName" name="studentName" placeholder="Enter full name" required>
+                <input type="text" id="studentName" name="entry.225577804" placeholder="Enter full name" required>
             </div>
 
             <div class="form-group slide-in" style="animation-delay: 0.1s;">
                 <label for="fatherName">Father's Name</label>
-                <input type="text" id="fatherName" name="fatherName" placeholder="Enter father's name" required>
+                <input type="text" id="fatherName" name="entry.42482555" placeholder="Enter father's name" required>
             </div>
 
             <div class="form-group slide-in" style="animation-delay: 0.2s;">
                 <label for="mobileNumber">Mobile Number</label>
-                <input type="tel" id="mobileNumber" name="mobileNumber" placeholder="Enter 10-digit mobile number"
+                <input type="tel" id="mobileNumber" name="entry.754224090" placeholder="Enter 10-digit mobile number"
                     pattern="[0-9]{10}" required title="Please enter a valid 10-digit mobile number">
             </div>
 
             <div class="form-group slide-in" style="animation-delay: 0.3s;">
                 <label for="address">Address</label>
-                <textarea id="address" name="address" rows="4" placeholder="Enter residential address"
+                <textarea id="address" name="entry.1742332738" rows="4" placeholder="Enter residential address"
                     required></textarea>
             </div>
 
@@ -50,12 +53,17 @@
             </button>
         </form>
 
-        <div id="successMessage" class="success-message hidden">
+    </div>
+
+    <!-- Success Popup Modal -->
+    <div id="successOverlay" class="modal-overlay hidden">
+        <div id="successMessage" class="success-message">
             <div class="success-icon">✓</div>
             <h2>Application Submitted!</h2>
             <p>Thank you for applying. We will contact you soon.</p>
-            <button onclick="resetForm()" class="secondary-btn">New Application</button>
+            <button onclick="resetForm()" class="secondary-btn">Close</button>
         </div>
+    </div>
     </div>
 
     <script src="main.js"></script>
