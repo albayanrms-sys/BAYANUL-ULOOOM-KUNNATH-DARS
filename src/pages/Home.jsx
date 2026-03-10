@@ -59,6 +59,25 @@ function Home() {
           </div>
         </div>
       </section>
+
+      {/* Admission Poster Section */}
+      <section className="poster-section py-5 bg-light-teal">
+        <div className="container">
+          <div className="row justify-content-center">
+            <div className="col-lg-8 text-center">
+              <h2 className="section-title mb-4">അഡ്മിഷൻ ആരംഭിച്ചിരിക്കുന്നു!</h2>
+              <div className="poster-wrapper rounded-4 shadow-lg overflow-hidden transition-transform hover-scale">
+                <img src="/poster.jpg" alt="Admission Poster" className="img-fluid w-100" />
+              </div>
+              <div className="mt-4">
+                <a href="/admission" className="btn btn-premium-teal btn-lg shadow-teal">
+                   ഇപ്പോൾ അപേക്ഷിക്കുക
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

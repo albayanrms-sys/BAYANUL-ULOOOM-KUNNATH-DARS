@@ -145,6 +145,21 @@
   animation: fadeIn 1.2s ease-in forwards;
 }
 
+/* Poster Section */
+.bg-light-teal {
+  background: #f0fdfa; /* Light teal gradient feel */
+}
+
+.poster-wrapper {
+  border: 4px solid #fff;
+}
+
+.poster-wrapper img {
+  border-radius: inherit;
+  object-fit: contain;
+  max-height: 800px; /* Optional cap so it's not too immense */
+}
+
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(30px); }
   to { opacity: 1; transform: translateY(0); }
