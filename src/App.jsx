@@ -27,7 +27,7 @@ function Header() {
         <NavLink className="navbar-brand d-flex align-items-center gap-2" to="/">
           <img src="/logo.png" alt="Logo" width="45" height="45" className="rounded-circle logo-glow" />
           <div className="brand-text">
-            <span className="brand-title">ബയാനുൾ ഉലൂം ദർസ്</span>
+            <span className="brand-title">ബായനുൽ ഉലൂം ദർസ്</span>
             <span className="brand-subtitle">BAYANUL ULOOM DARS</span>
           </div>
         </NavLink>
@@ -76,7 +76,7 @@ function Footer() {
         <div className="row g-4">
           <div className="col-lg-4">
             <div className="footer-brand border-bottom-teal pb-3 mb-3">
-              <h4 className="footer-title">ബയാനുൾ ഉലൂം ദർസ്</h4>
+              <h4 className="footer-title">ബായനുൽ ഉലൂം ദർസ്</h4>
               <p className="footer-desc">പരമ്പരാഗത മൂല്യങ്ങളും ആധുനിക അറിവുകളും കൂട്ടിയിണക്കുന്ന ഉൽകൃഷ്ട വിദ്യാലയം.</p>
             </div>
           </div>

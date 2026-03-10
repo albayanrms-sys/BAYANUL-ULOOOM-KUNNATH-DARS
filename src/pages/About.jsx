@@ -19,7 +19,7 @@ function About() {
                 </div>
               </div>
               <div className="col-md-6 order-md-1">
-                <h3 className="section-title mb-3">ബയാനുൾ ഉലൂം ദർസ് കുന്നത്ത്</h3>
+                <h3 className="section-title mb-3">ബായനുൽ ഉലൂം ദർസ് കുന്നത്ത്</h3>
                 <p className="lead fs-5 text-dark opacity-90 mb-4">
                   ഇസ്ലാമിക പാരമ്പര്യവും ആധുനിക വിദ്യാഭ്യാസ രീതികളും കൂട്ടിയിണക്കി വിദ്യാർത്ഥികളെ ഉൽകൃഷ്ടമായ ഭാവിയിലേക്ക് നയിക്കുന്ന ഒരു ഉത്തമ വിദ്യാലയം.
                 </p>

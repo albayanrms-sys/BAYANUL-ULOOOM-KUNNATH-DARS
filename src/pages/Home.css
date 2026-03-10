@@ -156,8 +156,7 @@
 
 .poster-wrapper img {
   border-radius: inherit;
-  object-fit: contain;
-  max-height: 800px; /* Optional cap so it's not too immense */
+  display: block;
 }
 
 @keyframes slideUp {
