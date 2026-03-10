@@ -12,7 +12,7 @@ function Header() {
     <nav className="navbar navbar-expand-lg navbar-dark sticky-top" id="mainNav">
       <div className="container">
         <NavLink className="navbar-brand d-flex align-items-center gap-2" to="/">
-          <img src="/icon kunnath dars.png" alt="Logo" width="42" height="42" className="rounded-circle logo-icon" />
+          <img src="/logo.png" alt="Logo" width="42" height="42" className="rounded-circle logo-icon" />
           <span className="brand-title">ബയാനുൾ ഉലൂം ദർസ്</span>
         </NavLink>
         <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
