@@ -93,7 +93,8 @@ function Footer() {
             <h5 className="footer-subtitle">ബന്ധപ്പെടുക</h5>
             <div className="footer-contact">
               <a href="mailto:albayanrms@gmail.com" className="d-block mb-2">📧 albayanrms@gmail.com</a>
-              <a href="tel:+919745304342" className="d-block mb-3">📞 97453 04342</a>
+              <a href="tel:+919745304342" className="d-block mb-1">📞 97453 04342</a>
+              <a href="tel:+919895404342" className="d-block mb-3">📞 98954 04342</a>
               <div className="social-icons d-flex gap-3">
                 <a href="https://wa.me/9745304342" target="_blank" rel="noopener">WhatsApp</a>
                 <a href="https://t.me/ALBAYANKUNNATH" target="_blank" rel="noopener">Telegram</a>

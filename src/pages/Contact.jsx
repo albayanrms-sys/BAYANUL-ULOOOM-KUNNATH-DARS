@@ -17,7 +17,10 @@ function Contact() {
             <span className="fs-3">📞</span>
             <div className="flex-grow-1 overflow-hidden">
                 <small className="text-muted d-block lh-1 mb-1">ഫോൺ</small>
-                <a href="tel:+919745304342" className="text-decoration-none fw-bold link-primary">+91 97453 04342</a>
+                <div className="d-flex flex-column gap-1">
+                  <a href="tel:+919745304342" className="text-decoration-none fw-bold link-primary">+91 97453 04342</a>
+                  <a href="tel:+919895404342" className="text-decoration-none fw-bold link-primary">+91 98954 04342</a>
+                </div>
             </div>
           </div>
           <div className="list-group-item bg-transparent d-flex align-items-center gap-3 py-3 border-light opacity-80">
