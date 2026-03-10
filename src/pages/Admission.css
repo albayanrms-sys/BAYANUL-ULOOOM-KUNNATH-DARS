@@ -1,0 +1,36 @@
+.glass-form {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 2rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.admission-form-card .form-control {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 78, 100, 0.1);
+  border-radius: 0.8rem;
+  padding: 1rem 1.2rem;
+  transition: all 0.3s;
+}
+
+.admission-form-card .form-control:focus {
+  background: #fff;
+  border-color: #008080;
+  box-shadow: 0 0 0 4px rgba(0, 128, 128, 0.1);
+}
+
+.btn-teal-primary {
+  background: #006d77;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.btn-teal-primary:hover {
+  background: #004e64;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 109, 119, 0.3);
+}
