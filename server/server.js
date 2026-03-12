@@ -84,7 +84,11 @@ app.use(express.static(path.resolve(__dirname, '..', 'dist')));
 
 // Simple health‑check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Backend is running' });
+  res.json({ 
+    status: 'ok', 
+    message: 'Backend is running',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
 });
 
 // For SPA routing – return index.html for any unknown route

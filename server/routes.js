@@ -26,7 +26,9 @@ const isAdmin = (req, res, next) => {
 
 // Login Route (Admin & Student)
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+  let { username, password } = req.body;
+  if (username) username = username.trim();
+  
   const user = await User.findOne({ username });
   if (!user) return res.status(400).json({ error: 'Invalid credentials' });
   
