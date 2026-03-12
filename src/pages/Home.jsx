@@ -3,22 +3,8 @@ import "./Home.css";
 function Home() {
   return (
     <div className="home-container">
-      {/* Hero Section */}
-      <section className="hero-section">
-        <div className="container h-100 d-flex align-items-center justify-content-center text-center">
-          <div className="hero-content glass-card p-5">
-            <h1 className="main-title mb-3 animate-slide-up">ബായനുൽ ഉലൂം ദർസ്</h1>
-            <p className="sub-description mb-4 animate-fade-in">പരമ്പരാഗത മൂല്യങ്ങളുടെയും ആധുനിക അറിവുകളുടെയും സംഗമഭൂമി. വിദ്യാർത്ഥികളുടെ ഉന്നത വിജയത്തിനായി ഞങ്ങൾ പ്രതിജ്ഞാബദ്ധരാണ്.</p>
-            <div className="cta-wrapper">
-              <a href="/admission" className="btn btn-premium-teal btn-lg me-3">അഡ്മിഷൻ അപേക്ഷിക്കുക</a>
-              <a href="/about" className="btn btn-outline-premium btn-lg">കൂടുതൽ അറിയാൻ</a>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* About Section on Home */}
-      <section className="about-summary py-5">
+      <section className="about-summary py-5 bg-white">
         <div className="container">
           <div className="row align-items-center g-5">
             <div className="col-md-6">
@@ -38,6 +24,20 @@ function Home() {
               <div className="about-visual rounded-5 overflow-hidden shadow-lg">
                  <img src="/dars_building.jpg" alt="Dars Building" className="img-fluid" />
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Hero Section - Moved Down */}
+      <section className="hero-section">
+        <div className="container h-100 d-flex align-items-center justify-content-center text-center">
+          <div className="hero-content glass-card p-5">
+            <h1 className="main-title mb-3 animate-slide-up">ബായനുൽ ഉലൂം ദർസ്</h1>
+            <p className="sub-description mb-4 animate-fade-in">പരമ്പരാഗത മൂല്യങ്ങളുടെയും ആധുനിക അറിവുകളുടെയും സംഗമഭൂമി. വിദ്യാർത്ഥികളുടെ ഉന്നത വിജയത്തിനായി ഞങ്ങൾ പ്രതിജ്ഞാബദ്ധരാണ്.</p>
+            <div className="cta-wrapper">
+              <a href="/admission" className="btn btn-premium-teal btn-lg me-3">അഡ്മിഷൻ അപേക്ഷിക്കുക</a>
+              <a href="/about" className="btn btn-outline-premium btn-lg">കൂടുതൽ അറിയാൻ</a>
             </div>
           </div>
         </div>

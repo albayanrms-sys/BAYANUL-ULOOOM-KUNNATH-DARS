@@ -38,27 +38,27 @@ function Header() {
         <div className="collapse navbar-collapse" id="navbarNav">
           <ul className="navbar-nav mx-auto nav-links">
             <li className="nav-item">
-              <NavLink className="nav-link" to="/" end>HOME</NavLink>
+              <NavLink className="nav-link" to="/" end onClick={() => document.getElementById('navbarNav').classList.remove('show')}>HOME</NavLink>
             </li>
             <li className="nav-item">
-              <NavLink className="nav-link" to="/about">ABOUT US</NavLink>
+              <NavLink className="nav-link" to="/about" onClick={() => document.getElementById('navbarNav').classList.remove('show')}>ABOUT US</NavLink>
             </li>
             <li className="nav-item">
-              <NavLink className="nav-link" to="/gallery">GALLERY</NavLink>
+              <NavLink className="nav-link" to="/gallery" onClick={() => document.getElementById('navbarNav').classList.remove('show')}>GALLERY</NavLink>
             </li>
             <li className="nav-item">
-              <NavLink className="nav-link" to="/admission">ADMISSION</NavLink>
+              <NavLink className="nav-link" to="/admission" onClick={() => document.getElementById('navbarNav').classList.remove('show')}>ADMISSION</NavLink>
             </li>
             <li className="nav-item">
-              <NavLink className="nav-link" to="/contact">CONTACT</NavLink>
+              <NavLink className="nav-link" to="/contact" onClick={() => document.getElementById('navbarNav').classList.remove('show')}>CONTACT</NavLink>
             </li>
           </ul>
           
           <div className="nav-auth-btns d-flex gap-2">
-            <NavLink className="btn btn-outline-light login-btn student-login" to="/student-login">
+            <NavLink className="btn btn-outline-light login-btn student-login" to="/student-login" onClick={() => document.getElementById('navbarNav').classList.remove('show')}>
               STUDENT LOGIN
             </NavLink>
-            <NavLink className="btn btn-teal-solid login-btn admin-login-btn" to="/admin">
+            <NavLink className="btn btn-teal-solid login-btn admin-login-btn" to="/admin" onClick={() => document.getElementById('navbarNav').classList.remove('show')}>
               ADMIN LOGIN
             </NavLink>
           </div>
