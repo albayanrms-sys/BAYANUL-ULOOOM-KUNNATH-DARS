@@ -3,8 +3,8 @@ import "./Admin.css";
 
 function Admin() {
   const [token, setToken] = useState(localStorage.getItem('adminToken'));
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("ramees baqavi");
+  const [password, setPassword] = useState("remees786");
   
   // Dashboard states
   const [activeTab, setActiveTab] = useState("overview");
