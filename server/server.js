@@ -41,12 +41,17 @@ const initializeAdmin = async () => {
 };
 
 // MongoDB connection
+let lastDbError = null;
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/al-bayan-kunnath')
   .then(() => {
     console.log('✅ Connected to MongoDB');
+    lastDbError = null;
     initializeAdmin();
   })
-  .catch((err) => console.error('❌ MongoDB connection error:', err));
+  .catch((err) => {
+    console.error('❌ MongoDB connection error:', err);
+    lastDbError = err.message;
+  });
 
 // Cloudinary configuration
 cloudinary.config({
@@ -88,7 +93,8 @@ app.get('/api/health', (req, res) => {
     status: 'ok', 
     message: 'Backend is running',
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    db_uri_status: process.env.MONGODB_URI ? 'present' : 'missing'
+    db_uri_status: process.env.MONGODB_URI ? 'present' : 'missing',
+    db_error: lastDbError
   });
 });
 
