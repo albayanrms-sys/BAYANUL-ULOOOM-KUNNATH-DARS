@@ -17,8 +17,34 @@ function Home() {
         </div>
       </section>
 
+      {/* About Section on Home */}
+      <section className="about-summary py-5">
+        <div className="container">
+          <div className="row align-items-center g-5">
+            <div className="col-md-6">
+              <h2 className="section-title mb-4">ബായനുൽ ഉലൂം ദർസിനെക്കുറിച്ച്</h2>
+              <p className="lead text-muted">
+                കുന്നത്ത് മഹല്ലിന്റെ തണലിൽ പ്രവർത്തിക്കുന്ന ഈ സ്ഥാപനം ദീർഘകാലമായി മത-ഭൗതിക വിജ്ഞാന രംഗത്ത് മികച്ച സേവനം കാഴ്ചവച്ചു വരുന്നു. 
+                വിദ്യാർത്ഥികളുടെ വ്യക്തിത്വ വികാസത്തിനും ആത്മീയ ഉന്നതിക്കും ഞങ്ങൾ വലിയ പ്രാധാന്യം നൽകുന്നു.
+              </p>
+              <ul className="list-unstyled mt-4 d-grid gap-2">
+                <li className="d-flex align-items-center gap-2"><span className="text-teal fw-bold">✓</span> മികച്ച ലൈബ്രറി സൗകര്യം</li>
+                <li className="d-flex align-items-center gap-2"><span className="text-teal fw-bold">✓</span> താമസിച്ചു പഠിക്കാനുള്ള സൗകര്യം (Boarding)</li>
+                <li className="d-flex align-items-center gap-2"><span className="text-teal fw-bold">✓</span> അനുഗ്രഹീതരായ ഉസ്താദുമാരുടെ നേതൃത്വം</li>
+              </ul>
+              <a href="/about" className="btn btn-outline-teal mt-4 rounded-pill px-4">കൂടുതൽ വായിക്കുക</a>
+            </div>
+            <div className="col-md-6">
+              <div className="about-visual rounded-5 overflow-hidden shadow-lg">
+                 <img src="/dars_building.jpg" alt="Dars Building" className="img-fluid" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Building Image Section */}
-      <section className="building-display py-5">
+      <section className="building-display py-5 bg-white">
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-10 overflow-hidden rounded-5 shadow-2xl transition-transform hover-scale">
@@ -28,8 +54,7 @@ function Home() {
         </div>
       </section>
 
-
-      {/* Admission Poster Section */}
+      {/* Admission Poster Section - Last */}
       <section className="poster-section py-5 bg-light-teal">
         <div className="container">
           <div className="row justify-content-center">
