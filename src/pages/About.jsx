@@ -12,10 +12,6 @@ function About() {
               <div className="col-md-6 order-md-2">
                 <div className="about-image-wrapper">
                   <img src="/dars_building.jpg" alt="About Bayanul Uloom Dars" className="img-fluid rounded-4 shadow-sm grayscale-hover" />
-                  <div className="experience-badge bg-teal-solid text-white p-3 rounded-3 shadow text-center position-absolute bottom-0 end-0">
-                    <span className="fw-bold fs-4 d-block">20+</span>
-                    <span className="small">വർഷത്തെ സേവനം</span>
-                  </div>
                 </div>
               </div>
               <div className="col-md-6 order-md-1">
