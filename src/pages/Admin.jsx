@@ -19,11 +19,18 @@ function Admin() {
   const [totalMarks, setTotalMarks] = useState("");
   const [grade, setGrade] = useState("");
 
+  // Gallery Form
+  const [galleryTitle, setGalleryTitle] = useState("");
+  const [galleryFile, setGalleryFile] = useState(null);
+  const [galleryItems, setGalleryItems] = useState([]);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+
   useEffect(() => {
     if (token) {
       fetchStudents();
       fetchSettings();
       fetchResults();
+      fetchGallery();
     }
   }, [token]);
 
@@ -71,6 +78,11 @@ function Admin() {
     if(res.ok) setResults(await res.json());
   };
 
+  const fetchGallery = async () => {
+    const res = await fetch("/api/gallery");
+    if(res.ok) setGalleryItems(await res.json());
+  };
+
   const updateSetting = async (e) => {
     e.preventDefault();
     const res = await fetch("/api/settings/admission", {
@@ -99,6 +111,51 @@ function Admin() {
       setResultStudent(""); setExamName(""); setTotalMarks(""); setGrade("");
       fetchResults();
     }
+  };
+
+  const uploadMedia = async (e) => {
+    e.preventDefault();
+    if (!galleryFile) return;
+    setUploadingMedia(true);
+    
+    // Upload file to Cloudinary first
+    const formData = new FormData();
+    formData.append("file", galleryFile);
+    
+    try {
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+      const uploadData = await uploadRes.json();
+      
+      if (!uploadRes.ok) throw new Error(uploadData.error || "Upload failed");
+      
+      // Save URL to MongoDB
+      const res = await fetch("/api/gallery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ 
+          url: uploadData.url, 
+          title: galleryTitle,
+          type: galleryFile.type.includes("video") ? "video" : "image"
+        })
+      });
+      
+      if(res.ok) {
+        alert("Media uploaded successfully!");
+        setGalleryTitle("");
+        setGalleryFile(null);
+        fetchGallery();
+      }
+    } catch(err) {
+      alert(err.message || "Failed to upload media");
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
+  const deleteGalleryItem = async (id) => {
+    if(!window.confirm("Delete this media from gallery?")) return;
+    await fetch(`/api/gallery/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    fetchGallery();
   };
 
   if (!token) {
@@ -131,6 +188,7 @@ function Admin() {
             <button className={`nav-link text-start rounded text-white ${activeTab === 'overview' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('overview')}>📊 Dashboard</button>
             <button className={`nav-link text-start rounded text-white ${activeTab === 'students' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('students')}>👨‍🎓 Students List</button>
             <button className={`nav-link text-start rounded text-white ${activeTab === 'results' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('results')}>📝 Publish Results</button>
+            <button className={`nav-link text-start rounded text-white ${activeTab === 'gallery' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('gallery')}>📸 Gallery Uploads</button>
             <button className={`nav-link text-start rounded text-white ${activeTab === 'settings' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('settings')}>⚙️ Settings / Notices</button>
           </div>
           <button className="btn btn-outline-light w-100 rounded-pill mt-5 fw-bold" onClick={logout}>Sign Out</button>
@@ -174,18 +232,23 @@ function Admin() {
                     <tr>
                       <th className="text-muted">NAME</th>
                       <th className="text-muted">PHONE/USER</th>
-                      <th className="text-muted">DOB/PASSWD</th>
-                      <th className="text-muted">APPLIED</th>
+                      <th className="text-muted">DOCUMENTS</th>
                       <th className="text-muted text-end">ACTION</th>
                     </tr>
                   </thead>
                   <tbody>
                     {students.map(s => (
                       <tr key={s._id}>
-                        <td className="fw-bold fs-6">{s.studentName}</td>
+                        <td className="fw-bold fs-6">
+                          {s.profilePhoto && <img src={s.profilePhoto} alt="Profile" className="rounded-circle me-2" width="30" height="30" style={{objectFit: 'cover'}}/>}
+                          {s.studentName}
+                        </td>
                         <td className="font-monospace text-teal">{s.phone}</td>
-                        <td className="font-monospace text-secondary">{s.dob}</td>
-                        <td>{new Date(s.createdAt).toLocaleDateString()}</td>
+                        <td>
+                          {s.aadharFile && <a href={s.aadharFile} target="_blank" rel="noreferrer" className="badge bg-primary text-decoration-none me-1">Aadhar</a>}
+                          {s.sslcFile && <a href={s.sslcFile} target="_blank" rel="noreferrer" className="badge bg-info text-dark text-decoration-none">SSLC</a>}
+                          {!s.aadharFile && !s.sslcFile && <span className="small text-muted">-</span>}
+                        </td>
                         <td className="text-end">
                           <button className="btn btn-sm btn-outline-danger shadow-sm rounded border-0 fw-bold px-3 py-1" onClick={() => deleteStudent(s._id)}>Remove</button>
                         </td>
@@ -269,6 +332,54 @@ function Admin() {
                     {results.length === 0 && <tr><td colSpan="5" className="text-center py-5 text-muted">No results</td></tr>}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'gallery' && (
+            <div>
+              <h2 className="mb-4 fw-bold">Manage Gallery</h2>
+              
+              <div className="card shadow-sm border rounded-4 p-4 mb-5 bg-white">
+                <h5 className="mb-3 text-teal fw-bold">Upload Photo or Video</h5>
+                <form onSubmit={uploadMedia} className="row g-4 align-items-end">
+                  <div className="col-md-5">
+                    <label className="form-label fw-bold text-muted small">File (Image/Video)</label>
+                    <input type="file" className="form-control p-3 bg-light" accept="image/*,video/*" onChange={e=>setGalleryFile(e.target.files[0])} required />
+                  </div>
+                  <div className="col-md-5">
+                    <label className="form-label fw-bold text-muted small">Title / Caption</label>
+                    <input type="text" className="form-control p-3 bg-light" placeholder="Annual Event 2026" value={galleryTitle} onChange={e=>setGalleryTitle(e.target.value)} required />
+                  </div>
+                  <div className="col-md-2">
+                    <button type="submit" className="btn btn-teal-primary w-100 py-3 rounded fw-bold shadow-sm" disabled={uploadingMedia}>
+                      {uploadingMedia ? "Uploading..." : "Upload"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <h4 className="mb-3 fw-bold">Current Gallery</h4>
+              <div className="row g-4">
+                {galleryItems.map(item => (
+                  <div className="col-md-4 col-sm-6" key={item._id}>
+                    <div className="card shadow-sm border-0 rounded-4 overflow-hidden position-relative">
+                      {item.type === 'video' ? (
+                        <video src={item.url} controls className="w-100" style={{objectFit: 'cover', height: '200px'}} />
+                      ) : (
+                        <img src={item.url} alt={item.title} className="w-100" style={{objectFit: 'cover', height: '200px'}} />
+                      )}
+                      <div className="p-3 bg-white">
+                        <p className="mb-1 fw-bold text-truncate">{item.title}</p>
+                        <div className="d-flex justify-content-between align-items-center mt-2">
+                          <span className="badge bg-light text-dark border small">{item.type.toUpperCase()}</span>
+                          <button onClick={() => deleteGalleryItem(item._id)} className="btn btn-sm btn-outline-danger">Delete</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {galleryItems.length === 0 && <p className="text-muted w-100 mt-4 ms-3">No gallery items uploaded yet.</p>}
               </div>
             </div>
           )}

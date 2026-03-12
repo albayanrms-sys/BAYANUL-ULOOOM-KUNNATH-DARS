@@ -9,6 +9,10 @@ function StudentLogin() {
   const [password, setPassword] = useState("");
   const [studentInfo, setStudentInfo] = useState(null);
   const [results, setResults] = useState([]);
+  
+  // Profile & Tab States
+  const [activeTab, setActiveTab] = useState("results"); // 'results' or 'profile'
+  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   useEffect(() => {
     if (token) fetchMyResults();
@@ -49,6 +53,42 @@ function StudentLogin() {
   const logout = () => {
     localStorage.removeItem("studentToken");
     setToken(null);
+  };
+
+  const handleDocumentUpload = async (e, type) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setUploadingDoc(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error(uploadData.error);
+
+      // Save to profile
+      const updatePayload = {};
+      if (type === 'aadhar') updatePayload.aadharFile = uploadData.url;
+      if (type === 'sslc') updatePayload.sslcFile = uploadData.url;
+      if (type === 'profile') updatePayload.profilePhoto = uploadData.url;
+
+      const updateRes = await fetch("/api/my-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(updatePayload)
+      });
+      
+      if(updateRes.ok) {
+        alert("Profile document uploaded successfully!");
+        fetchMyResults(); // Refresh student data
+      }
+    } catch(err) {
+      alert("Failed to upload document. Please try again.");
+    } finally {
+      setUploadingDoc(false);
+    }
   };
 
   const downloadMarklist = (result) => {
@@ -126,36 +166,110 @@ function StudentLogin() {
         <button onClick={logout} className="btn btn-outline-danger fw-bold rounded-pill px-4">Sign Out</button>
       </div>
 
-      <h3 className="mb-4 fw-bold">Official Results & Marklists</h3>
-      
-      {results.length === 0 ? (
-        <div className="alert alert-info border-0 shadow-sm p-4 rounded-4 text-center">
-          <h4 className="fw-bold mb-2">No Results Yet!</h4>
-          <p className="mb-0">Your exam results have not been published by the administration yet. Check back later.</p>
-        </div>
-      ) : (
+      <div className="d-flex border-bottom mb-4">
+        <button className={`btn rounded-0 px-4 py-3 fw-bold ${activeTab === 'results' ? 'btn-teal-primary shadow-sm' : 'text-muted'}`} onClick={() => setActiveTab('results')}>🏆 My Results</button>
+        <button className={`btn rounded-0 px-4 py-3 fw-bold ${activeTab === 'profile' ? 'btn-teal-primary shadow-sm' : 'text-muted'}`} onClick={() => setActiveTab('profile')}>👤 My Profile & Documents</button>
+      </div>
+
+      {activeTab === 'profile' && (
         <div className="row g-4">
-          {results.map(res => (
-            <div key={res._id} className="col-md-6 col-lg-4">
-              <div className="card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
-                <div className="bg-teal-primary text-white p-3 text-center text-capitalize">
-                  <h5 className="mb-0 fw-bold">{res.examName}</h5>
-                </div>
-                <div className="card-body p-4 text-center bg-light">
-                  <p className="text-muted small mb-2">Total Score</p>
-                  <h2 className="display-4 fw-bold mb-3">{res.totalMarks}</h2>
-                  <span className="badge bg-success fs-5 px-4 py-2 rounded-pill shadow-sm">Grade: {res.grade}</span>
-                  <div className="mt-4 pt-3 border-top border-light">
-                    <p className="small text-muted mb-3">Published: {new Date(res.publishedDate).toLocaleDateString()}</p>
-                    <button onClick={() => downloadMarklist(res)} className="btn btn-outline-teal w-100 fw-bold py-2">
-                      ⬇ Download Marklist
-                    </button>
+          <div className="col-md-5">
+            <div className="card shadow-sm border-0 rounded-4 p-4 text-center">
+              <div className="mb-4 position-relative d-inline-block">
+                <img 
+                  src={studentInfo?.profilePhoto || "/logo.png"} 
+                  alt="Profile" 
+                  className="rounded-circle shadow" 
+                  style={{width: '150px', height: '150px', objectFit: 'cover'}} 
+                />
+                <label className="btn btn-sm btn-teal-primary position-absolute bottom-0 end-0 rounded-circle" disabled={uploadingDoc} style={{width: '40px', height: '40px', lineHeight: '25px'}}>
+                  {uploadingDoc ? '...' : '✏️'}
+                  <input type="file" accept="image/*" className="d-none" onChange={(e) => handleDocumentUpload(e, 'profile')} />
+                </label>
+              </div>
+              <h4 className="fw-bold">{studentInfo?.studentName}</h4>
+              <p className="text-muted mb-0">DOB: {studentInfo?.dob}</p>
+              <p className="text-muted">Phone: {studentInfo?.phone}</p>
+            </div>
+          </div>
+          
+          <div className="col-md-7">
+            <div className="card shadow-sm border-0 rounded-4 p-4 h-100">
+              <h4 className="fw-bold border-bottom pb-3 mb-4">Official Documents</h4>
+              
+              <div className="mb-4">
+                <label className="fw-bold d-block mb-2">Aadhar Card</label>
+                {studentInfo?.aadharFile ? (
+                  <div className="d-flex align-items-center gap-3">
+                    <span className="badge bg-success py-2 px-3"><i className="bi bi-check-circle"></i> Uploaded</span>
+                    <a href={studentInfo.aadharFile} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-teal">View File</a>
+                    <label className="btn btn-sm btn-outline-secondary mb-0">
+                      Update <input type="file" className="d-none" onChange={e => handleDocumentUpload(e, 'aadhar')} />
+                    </label>
                   </div>
-                </div>
+                ) : (
+                  <div>
+                    <span className="badge bg-danger py-2 px-3 mb-2">Pending</span>
+                    <input type="file" className="form-control bg-light mt-2" onChange={e => handleDocumentUpload(e, 'aadhar')} disabled={uploadingDoc} />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="fw-bold d-block mb-2">SSLC / Previous Education Log</label>
+                {studentInfo?.sslcFile ? (
+                  <div className="d-flex align-items-center gap-3">
+                    <span className="badge bg-success py-2 px-3"><i className="bi bi-check-circle"></i> Uploaded</span>
+                    <a href={studentInfo.sslcFile} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-teal">View File</a>
+                    <label className="btn btn-sm btn-outline-secondary mb-0">
+                      Update <input type="file" className="d-none" onChange={e => handleDocumentUpload(e, 'sslc')} />
+                    </label>
+                  </div>
+                ) : (
+                  <div>
+                    <span className="badge bg-danger py-2 px-3 mb-2">Pending</span>
+                    <input type="file" className="form-control bg-light mt-2" onChange={e => handleDocumentUpload(e, 'sslc')} disabled={uploadingDoc} />
+                  </div>
+                )}
               </div>
             </div>
-          ))}
+          </div>
         </div>
+      )}
+
+      {activeTab === 'results' && (
+        <>
+          <h3 className="mb-4 fw-bold">Official Results & Marklists</h3>
+          {results.length === 0 ? (
+            <div className="alert alert-info border-0 shadow-sm p-4 rounded-4 text-center">
+              <h4 className="fw-bold mb-2">No Results Yet!</h4>
+              <p className="mb-0">Your exam results have not been published by the administration yet. Check back later.</p>
+            </div>
+          ) : (
+            <div className="row g-4">
+              {results.map(res => (
+                <div key={res._id} className="col-md-6 col-lg-4">
+                  <div className="card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div className="bg-teal-primary text-white p-3 text-center text-capitalize">
+                      <h5 className="mb-0 fw-bold">{res.examName}</h5>
+                    </div>
+                    <div className="card-body p-4 text-center bg-light">
+                      <p className="text-muted small mb-2">Total Score</p>
+                      <h2 className="display-4 fw-bold mb-3">{res.totalMarks}</h2>
+                      <span className="badge bg-success fs-5 px-4 py-2 rounded-pill shadow-sm">Grade: {res.grade}</span>
+                      <div className="mt-4 pt-3 border-top border-light">
+                        <p className="small text-muted mb-3">Published: {new Date(res.publishedDate).toLocaleDateString()}</p>
+                        <button onClick={() => downloadMarklist(res)} className="btn btn-outline-teal w-100 fw-bold py-2">
+                          ⬇ Download Marklist
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </section>
   );

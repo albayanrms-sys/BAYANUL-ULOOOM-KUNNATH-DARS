@@ -57,9 +57,14 @@ cloudinary.config({
 
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: {
-    folder: 'al-bayan-gallery',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp']
+  params: async (req, file) => {
+    let resource_type = 'auto';
+    if (file.mimetype.includes('video')) resource_type = 'video';
+    return {
+      folder: 'al-bayan-assets',
+      allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'mp4', 'mkv'],
+      resource_type: resource_type
+    };
   }
 });
 const upload = multer({ storage });
@@ -67,11 +72,11 @@ const upload = multer({ storage });
 app.use('/api', apiRoutes);
 
 // Example Image Upload Route
-app.post('/api/upload', upload.single('image'), (req, res) => {
+app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
-  res.json({ imageUrl: req.file.path, message: 'Image uploaded successfully' });
+  res.json({ url: req.file.path, message: 'File uploaded successfully' });
 });
 
 // Serve static files from Vite's production build (dist folder)

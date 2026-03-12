@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { User, Setting, Student, Result } from './models.js';
+import { User, Setting, Student, Result, GalleryItem } from './models.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'bayanululoomsecret';
@@ -35,6 +35,17 @@ router.post('/login', async (req, res) => {
   
   const token = jwt.sign({ id: user._id, role: user.role, studentRef: user.studentRef }, JWT_SECRET);
   res.json({ token, role: user.role, username: user.username, studentRef: user.studentRef });
+});
+
+// Update Student Profile (Student)
+router.post('/my-profile', auth, async (req, res) => {
+  if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
+  try {
+    const student = await Student.findByIdAndUpdate(req.user.studentRef, req.body, { new: true });
+    res.json({ message: 'Profile updated successfully', student });
+  } catch(err) {
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
 });
 
 // Admission Settings
@@ -108,7 +119,7 @@ router.post('/results', auth, isAdmin, async (req, res) => {
 
 // Get All Results (Admin)
 router.get('/results', auth, isAdmin, async (req, res) => {
-  const results = await Result.find().populate('student', 'studentName phone').sort({ publishedDate: -1 });
+  const results = await Result.find().populate('student', 'studentName phone profilePhoto aadharFile sslcFile').sort({ publishedDate: -1 });
   res.json(results);
 });
 
@@ -118,6 +129,25 @@ router.get('/my-results', auth, async (req, res) => {
   const results = await Result.find({ student: req.user.studentRef }).sort({ publishedDate: -1 });
   const student = await Student.findById(req.user.studentRef);
   res.json({ results, student });
+});
+
+// GET Gallery items
+router.get('/gallery', async (req, res) => {
+  const items = await GalleryItem.find().sort({ uploadedAt: -1 });
+  res.json(items);
+});
+
+// Add Gallery items (Admin)
+router.post('/gallery', auth, isAdmin, async (req, res) => {
+  const item = new GalleryItem(req.body);
+  await item.save();
+  res.json(item);
+});
+
+// Delete Gallery item (Admin)
+router.delete('/gallery/:id', auth, isAdmin, async (req, res) => {
+  await GalleryItem.findByIdAndDelete(req.params.id);
+  res.json({ message: 'Gallery item deleted' });
 });
 
 export default router;
