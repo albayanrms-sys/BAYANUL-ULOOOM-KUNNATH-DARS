@@ -15,13 +15,23 @@ const settingSchema = new mongoose.Schema({
 const studentSchema = new mongoose.Schema({
   studentName: { type: String, required: true },
   fatherName: String,
+  motherName: String,
   dob: String,
+  place: String,
   address: String,
   phone: String,
+  guardianPhone: String,
+  email: String,
+  bloodGroup: String,
   previousEdu: String,
   profilePhoto: String,
   aadharFile: String,
   sslcFile: String,
+  birthCertFile: String,
+  tcFile: String,
+  marklistFile: String,
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  bio: String,
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -40,8 +50,17 @@ const galleryItemSchema = new mongoose.Schema({
   uploadedAt: { type: Date, default: Date.now }
 });
 
+const notificationSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  type: { type: String, enum: ['info', 'warning', 'result', 'urgent'], default: 'info' },
+  target: { type: String, default: 'all' }, // 'all', 'students', 'admins'
+  createdAt: { type: Date, default: Date.now }
+});
+
 export const User = mongoose.model('User', userSchema);
 export const Setting = mongoose.model('Setting', settingSchema);
 export const Student = mongoose.model('Student', studentSchema);
 export const Result = mongoose.model('Result', resultSchema);
 export const GalleryItem = mongoose.model('GalleryItem', galleryItemSchema);
+export const Notification = mongoose.model('Notification', notificationSchema);

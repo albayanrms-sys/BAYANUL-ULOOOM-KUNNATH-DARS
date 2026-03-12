@@ -29,14 +29,27 @@ function Admin() {
   const [newPassword, setNewPassword] = useState("");
   const [passwordChangeMsg, setPasswordChangeMsg] = useState({ text: "", type: "" });
 
+  // Deadline & Notification states
+  const [admissionDeadline, setAdmissionDeadline] = useState("");
+  const [notifications, setNotifications] = useState([]);
+  const [newNote, setNewNote] = useState({ title: "", message: "", type: "info" });
+
+  const [viewingStudent, setViewingStudent] = useState(null);
+
   useEffect(() => {
     if (token) {
       fetchStudents();
       fetchSettings();
       fetchResults();
       fetchGallery();
+      fetchNotifications();
     }
   }, [token]);
+
+  const fetchNotifications = async () => {
+    const res = await fetch("/api/notifications");
+    if(res.ok) setNotifications(await res.json());
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -74,6 +87,7 @@ function Admin() {
       const data = await res.json();
       setAdmissionActive(data.active);
       setAdmissionMsg(data.message || "");
+      setAdmissionDeadline(data.deadline || "");
     }
   };
 
@@ -92,9 +106,37 @@ function Admin() {
     const res = await fetch("/api/settings/admission", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ active: admissionActive, message: admissionMsg })
+      body: JSON.stringify({ active: admissionActive, message: admissionMsg, deadline: admissionDeadline })
     });
     if(res.ok) alert("Settings Updated!");
+  };
+
+  const approveStudent = async (id, status) => {
+    const res = await fetch(`/api/students/${id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status })
+    });
+    if(res.ok) fetchStudents();
+  };
+
+  const addNotification = async (e) => {
+    e.preventDefault();
+    const res = await fetch("/api/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(newNote)
+    });
+    if(res.ok) {
+      setNewNote({ title: "", message: "", type: "info" });
+      fetchNotifications();
+      alert("Notification Added!");
+    }
+  };
+
+  const deleteNotification = async (id) => {
+    await fetch(`/api/notifications/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    fetchNotifications();
   };
 
   const deleteStudent = async (id) => {
@@ -214,10 +256,11 @@ function Admin() {
           <h4 className="mb-4 text-center pb-3 border-bottom border-secondary fw-bold">ADMIN PANEL</h4>
           <div className="nav flex-column nav-pills gap-2 text-start">
             <button className={`nav-link text-start rounded text-white ${activeTab === 'overview' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('overview')}>📊 Dashboard</button>
-            <button className={`nav-link text-start rounded text-white ${activeTab === 'students' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('students')}>👨‍🎓 Students List</button>
-            <button className={`nav-link text-start rounded text-white ${activeTab === 'results' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('results')}>📝 Publish Results</button>
-            <button className={`nav-link text-start rounded text-white ${activeTab === 'gallery' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('gallery')}>📸 Gallery Uploads</button>
-            <button className={`nav-link text-start rounded text-white ${activeTab === 'settings' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('settings')}>⚙️ Settings / Notices</button>
+            <button className={`nav-link text-start rounded text-white ${activeTab === 'students' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('students')}>📋 Candidate Records</button>
+            <button className={`nav-link text-start rounded text-white ${activeTab === 'results' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('results')}>📝 Exam & Results</button>
+            <button className={`nav-link text-start rounded text-white ${activeTab === 'gallery' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('gallery')}>📸 Gallery Management</button>
+            <button className={`nav-link text-start rounded text-white ${activeTab === 'notifications' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('notifications')}>📢 Notifications</button>
+            <button className={`nav-link text-start rounded text-white ${activeTab === 'settings' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('settings')}>⚙️ Admission Setup</button>
             <button className={`nav-link text-start rounded text-white ${activeTab === 'security' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('security')}>🔐 Change Password</button>
           </div>
           <button className="btn btn-outline-light w-100 rounded-pill mt-5 fw-bold" onClick={logout}>Sign Out</button>
@@ -228,24 +271,30 @@ function Admin() {
             <div>
               <h2 className="mb-4 fw-bold">Dashboard Overview</h2>
               <div className="row g-4">
-                <div className="col-md-4">
-                  <div className="card p-4 bg-light-teal border-0 shadow-sm rounded-4 text-center">
+                <div className="col-md-3">
+                  <div className="card p-4 bg-light-teal border-0 shadow-sm rounded-4 text-center h-100">
                     <h3 className="display-4 fw-bold text-teal">{students.length}</h3>
                     <p className="text-muted mb-0 fw-medium">Total Students</p>
                   </div>
                 </div>
-                <div className="col-md-4">
-                  <div className="card p-4 bg-light border-0 shadow-sm rounded-4 text-center">
-                    <h3 className="display-4 fw-bold text-teal">{results.length}</h3>
-                    <p className="text-muted mb-0 fw-medium">Results Published</p>
+                <div className="col-md-3">
+                  <div className="card p-4 bg-warning-light border-0 shadow-sm rounded-4 text-center h-100">
+                    <h3 className="display-4 fw-bold text-warning">{students.filter(s => s.status === 'pending' || !s.status).length}</h3>
+                    <p className="text-muted mb-0 fw-medium">Pending Apps</p>
                   </div>
                 </div>
-                <div className="col-md-4">
-                  <div className="card p-4 bg-light border-0 shadow-sm rounded-4 text-center">
+                <div className="col-md-3">
+                  <div className="card p-4 bg-light border-0 shadow-sm rounded-4 text-center h-100">
+                    <h3 className="display-4 fw-bold text-teal">{results.length}</h3>
+                    <p className="text-muted mb-0 fw-medium">Results</p>
+                  </div>
+                </div>
+                <div className="col-md-3">
+                  <div className="card p-4 bg-light border-0 shadow-sm rounded-4 text-center h-100">
                     <h3 className={`display-5 my-2 fw-bold ${admissionActive ? "text-success" : "text-danger"}`}>
                       {admissionActive ? "OPEN" : "CLOSED"}
                     </h3>
-                    <p className="text-muted mb-0 fw-medium">Admissions</p>
+                    <p className="text-muted mb-0 fw-medium">Status</p>
                   </div>
                 </div>
               </div>
@@ -254,39 +303,128 @@ function Admin() {
 
           {activeTab === 'students' && (
             <div>
-              <h2 className="mb-4 fw-bold">Student Directory</h2>
-              <div className="table-responsive bg-white shadow-sm rounded-4 p-3 border">
-                <table className="table table-hover align-middle mb-0">
-                  <thead className="table-light">
-                    <tr>
-                      <th className="text-muted">NAME</th>
-                      <th className="text-muted">PHONE/USER</th>
-                      <th className="text-muted">DOCUMENTS</th>
-                      <th className="text-muted text-end">ACTION</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {students.map(s => (
-                      <tr key={s._id}>
-                        <td className="fw-bold fs-6">
-                          {s.profilePhoto && <img src={s.profilePhoto} alt="Profile" className="rounded-circle me-2" width="30" height="30" style={{objectFit: 'cover'}}/>}
-                          {s.studentName}
-                        </td>
-                        <td className="font-monospace text-teal">{s.phone}</td>
-                        <td>
-                          {s.aadharFile && <a href={s.aadharFile} target="_blank" rel="noreferrer" className="badge bg-primary text-decoration-none me-1">Aadhar</a>}
-                          {s.sslcFile && <a href={s.sslcFile} target="_blank" rel="noreferrer" className="badge bg-info text-dark text-decoration-none">SSLC</a>}
-                          {!s.aadharFile && !s.sslcFile && <span className="small text-muted">-</span>}
-                        </td>
-                        <td className="text-end">
-                          <button className="btn btn-sm btn-outline-danger shadow-sm rounded border-0 fw-bold px-3 py-1" onClick={() => deleteStudent(s._id)}>Remove</button>
-                        </td>
-                      </tr>
-                    ))}
-                    {students.length === 0 && <tr><td colSpan="5" className="text-center text-muted py-5">No students found</td></tr>}
-                  </tbody>
-                </table>
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <h2 className="fw-bold mb-0">Student Directory</h2>
+                <button className="btn btn-sm btn-outline-teal fw-bold" onClick={fetchStudents}>🔄 Refresh List</button>
               </div>
+
+              {viewingStudent ? (
+                <div className="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+                  <div className="bg-teal-primary text-white p-4 d-flex justify-content-between align-items-center">
+                    <h4 className="mb-0 fw-bold">Candidate Profile: {viewingStudent.studentName}</h4>
+                    <button className="btn btn-sm btn-light fw-bold" onClick={() => setViewingStudent(null)}>Close Profile</button>
+                  </div>
+                  <div className="card-body p-4 bg-white">
+                    <div className="row g-4">
+                      <div className="col-md-3 text-center border-end">
+                        <img 
+                          src={viewingStudent.profilePhoto || "/logo.png"} 
+                          alt="Profile" 
+                          className="rounded-4 shadow-sm mb-3 w-100" 
+                          style={{aspectRatio: '1/1', objectFit: 'cover', maxWidth: '200px'}} 
+                        />
+                        <h5 className="fw-bold mb-1">{viewingStudent.studentName}</h5>
+                        <p className="badge bg-light text-teal border mb-2">{viewingStudent.status?.toUpperCase()}</p>
+                        <div className="d-grid gap-2 mt-3">
+                          <button className="btn btn-sm btn-success" onClick={() => approveStudent(viewingStudent._id, 'approved')}>Approve Now</button>
+                          <button className="btn btn-sm btn-danger" onClick={() => approveStudent(viewingStudent._id, 'rejected')}>Reject Candidate</button>
+                        </div>
+                      </div>
+                      <div className="col-md-9">
+                        <div className="row g-3">
+                          <div className="col-md-6">
+                            <h6 className="text-muted small fw-bold text-uppercase border-bottom pb-1">Personal Details</h6>
+                            <p className="mb-1"><strong>Father:</strong> {viewingStudent.fatherName || "-"}</p>
+                            <p className="mb-1"><strong>Mother:</strong> {viewingStudent.motherName || "-"}</p>
+                            <p className="mb-1"><strong>DOB:</strong> {viewingStudent.dob || "-"}</p>
+                            <p className="mb-1"><strong>Blood Group:</strong> {viewingStudent.bloodGroup || "-"}</p>
+                            <p className="mb-1"><strong>Place:</strong> {viewingStudent.place || "-"}</p>
+                          </div>
+                          <div className="col-md-6">
+                            <h6 className="text-muted small fw-bold text-uppercase border-bottom pb-1">Contact Details</h6>
+                            <p className="mb-1"><strong>Phone:</strong> {viewingStudent.phone || "-"}</p>
+                            <p className="mb-1"><strong>Guardian Phone:</strong> {viewingStudent.guardianPhone || "-"}</p>
+                            <p className="mb-1"><strong>Email:</strong> {viewingStudent.email || "-"}</p>
+                            <p className="mb-1"><strong>Address:</strong> {viewingStudent.address || "-"}</p>
+                          </div>
+                          <div className="col-12 mt-4">
+                            <h6 className="text-muted small fw-bold text-uppercase border-bottom pb-1">Uploaded Documents</h6>
+                            <div className="d-flex flex-wrap gap-3 mt-2">
+                              {[
+                                { label: "Aadhar Card", file: viewingStudent.aadharFile },
+                                { label: "SSLC Book", file: viewingStudent.sslcFile },
+                                { label: "Birth Cert", file: viewingStudent.birthCertFile },
+                                { label: "TC File", file: viewingStudent.tcFile },
+                                { label: "Marklist", file: viewingStudent.marklistFile }
+                              ].map((doc, idx) => doc.file ? (
+                                <a key={idx} href={doc.file} target="_blank" rel="noreferrer" className="btn btn-outline-teal btn-sm shadow-sm d-flex align-items-center gap-2">
+                                  📂 {doc.label}
+                                </a>
+                              ) : (
+                                <span key={idx} className="btn btn-sm btn-light disabled text-muted border">❌ {doc.label} (Pending)</span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="col-12 mt-4">
+                            <h6 className="text-muted small fw-bold text-uppercase border-bottom pb-1">Student Bio / About</h6>
+                            <div className="p-3 bg-light rounded-3 mt-2">
+                               {viewingStudent.bio || "No bio provided by student."}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="table-responsive bg-white shadow-sm rounded-4 p-3 border">
+                  <table className="table table-hover align-middle mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th className="text-muted">NAME</th>
+                        <th className="text-muted">PHONE/USER</th>
+                        <th className="text-muted">STATUS</th>
+                        <th className="text-muted">DOCS</th>
+                        <th className="text-muted text-end">ACTION</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {students.map(s => (
+                        <tr key={s._id}>
+                          <td className="fw-bold fs-6">
+                            {s.profilePhoto && <img src={s.profilePhoto} alt="Profile" className="rounded-circle me-2" width="30" height="30" style={{objectFit: 'cover'}}/>}
+                            {s.studentName}
+                          </td>
+                          <td className="font-monospace text-teal">{s.phone}</td>
+                          <td>
+                            <span className={`badge ${s.status === 'approved' ? 'bg-success' : s.status === 'rejected' ? 'bg-danger' : 'bg-warning text-dark'}`}>
+                              {s.status?.toUpperCase() || 'PENDING'}
+                            </span>
+                          </td>
+                          <td>
+                             <span className="small text-muted">
+                               {(s.aadharFile ? 1 : 0) + (s.sslcFile ? 1 : 0) + (s.birthCertFile ? 1 : 0)} / 5
+                             </span>
+                          </td>
+                          <td className="text-end">
+                            <div className="btn-group gap-1">
+                              <button className="btn btn-sm btn-teal-primary px-3 py-1" onClick={() => setViewingStudent(s)}>View Detail</button>
+                               {s.status === 'pending' && (
+                                <>
+                                  <button className="btn btn-sm btn-success px-2 py-1" onClick={() => approveStudent(s._id, 'approved')}>Approve</button>
+                                  <button className="btn btn-sm btn-danger px-2 py-1" onClick={() => approveStudent(s._id, 'rejected')}>Reject</button>
+                                </>
+                              )}
+                              <button className="btn btn-sm btn-outline-danger px-1 py-1" onClick={() => deleteStudent(s._id)}>🗑️</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {students.length === 0 && <tr><td colSpan="5" className="text-center text-muted py-5">No students found</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              )}
               <p className="mt-3 small text-muted">* Student login credentials are automatically set to Phone (username) and DOB (password).</p>
             </div>
           )}
@@ -304,9 +442,14 @@ function Admin() {
                     </label>
                   </div>
                   <div className="mb-4">
-                    <label className="form-label text-muted small fw-bold">Admission Notice / Alert Box</label>
-                    <input type="text" className="form-control p-3 bg-light" value={admissionMsg} onChange={(e) => setAdmissionMsg(e.target.value)} placeholder="(e.g. 'Admissions close in 7 days!')" />
-                    <div className="form-text mt-2">This notice will be displayed immediately to the public on the admission page.</div>
+                    <label className="form-label text-muted small fw-bold">Admission Note (Criteria/Guidelines)</label>
+                    <textarea className="form-control p-3 bg-light" rows="2" value={admissionMsg} onChange={(e) => setAdmissionMsg(e.target.value)} placeholder="e.g. Applicants must be above 12 years old. Original documents required at time of interview." />
+                    <div className="form-text mt-2 text-info small">This note will appear at the top of the Registration Form for all applicants.</div>
+                  </div>
+                  <div className="mb-4">
+                    <label className="form-label text-muted small fw-bold">Admission Deadline (Auto-Close)</label>
+                    <input type="datetime-local" className="form-control p-3 bg-light" value={admissionDeadline} onChange={(e) => setAdmissionDeadline(e.target.value)} />
+                    <div className="form-text mt-2 small">Admissions will automatically disable after this time.</div>
                   </div>
                   <button type="submit" className="btn btn-teal-primary w-100 py-3 rounded shadow-sm fw-bold">Save Changes</button>
                 </form>
@@ -365,7 +508,7 @@ function Admin() {
             </div>
           )}
 
-           {activeTab === 'gallery' && (
+          {activeTab === 'gallery' && (
             <div>
               <h2 className="mb-4 fw-bold">Manage Gallery</h2>
               
@@ -409,6 +552,54 @@ function Admin() {
                   </div>
                 ))}
                 {galleryItems.length === 0 && <p className="text-muted w-100 mt-4 ms-3">No gallery items uploaded yet.</p>}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'notifications' && (
+            <div>
+              <h2 className="mb-4 fw-bold">Manage Notifications</h2>
+              <div className="card shadow-sm border rounded-4 p-4 mb-5 bg-white">
+                <h5 className="mb-3 text-teal fw-bold">Create New Announcement</h5>
+                <form onSubmit={addNotification} className="row g-3">
+                  <div className="col-md-4">
+                    <label className="form-label small fw-bold">Title</label>
+                    <input type="text" className="form-control bg-light" value={newNote.title} onChange={e=>setNewNote({...newNote, title: e.target.value})} required placeholder="e.g. Results Out!" />
+                  </div>
+                  <div className="col-md-5">
+                    <label className="form-label small fw-bold">Message</label>
+                    <input type="text" className="form-control bg-light" value={newNote.message} onChange={e=>setNewNote({...newNote, message: e.target.value})} required placeholder="Full announcement detail..." />
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label small fw-bold">Alert Type</label>
+                    <select className="form-select bg-light" value={newNote.type} onChange={e=>setNewNote({...newNote, type: e.target.value})}>
+                      <option value="info">Info (Blue)</option>
+                      <option value="warning">Warning (Yellow)</option>
+                      <option value="urgent">Urgent (Red)</option>
+                      <option value="result">Result (Green)</option>
+                    </select>
+                  </div>
+                  <div className="col-12 text-end">
+                    <button type="submit" className="btn btn-teal-primary px-4 fw-bold">Post Announcement</button>
+                  </div>
+                </form>
+              </div>
+
+              <h4 className="mb-3 fw-bold">Active Announcements</h4>
+              <div className="list-group shadow-sm border-0">
+                {notifications.map(n => (
+                  <div key={n._id} className="list-group-item list-group-item-action border-0 shadow-sm mb-2 rounded-3 d-flex justify-content-between align-items-center">
+                    <div>
+                      <span className={`badge me-2 ${n.type === 'urgent' ? 'bg-danger' : n.type === 'warning' ? 'bg-warning text-dark' : n.type === 'result' ? 'bg-success' : 'bg-info'}`}>
+                        {n.type.toUpperCase()}
+                      </span>
+                      <strong className="text-teal">{n.title}</strong>: <span className="ms-1">{n.message}</span>
+                      <div className="small text-muted mt-1">{new Date(n.createdAt).toLocaleString()}</div>
+                    </div>
+                    <button onClick={() => deleteNotification(n._id)} className="btn btn-sm btn-link text-danger text-decoration-none">Remove</button>
+                  </div>
+                ))}
+                {notifications.length === 0 && <p className="text-muted p-4 text-center">No active notifications.</p>}
               </div>
             </div>
           )}

@@ -11,12 +11,22 @@ function StudentLogin() {
   const [results, setResults] = useState([]);
   
   // Profile & Tab States
-  const [activeTab, setActiveTab] = useState("results"); // 'results' or 'profile'
+  const [activeTab, setActiveTab] = useState("results"); // 'results', 'profile', or 'notices'
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [tempBio, setTempBio] = useState("");
 
   useEffect(() => {
-    if (token) fetchMyResults();
+    if (token) {
+      fetchMyResults();
+      fetchNotifications();
+    }
   }, [token]);
+
+  const fetchNotifications = async () => {
+    const res = await fetch("/api/notifications");
+    if(res.ok) setNotifications(await res.json());
+  };
 
   const fetchMyResults = async () => {
     const res = await fetch("/api/my-results", { headers: { Authorization: `Bearer ${token}` } });
@@ -24,6 +34,7 @@ function StudentLogin() {
       const data = await res.json();
       setResults(data.results);
       setStudentInfo(data.student);
+      setTempBio(data.student?.bio || "");
     } else {
       localStorage.removeItem('studentToken');
       setToken(null);
@@ -73,6 +84,9 @@ function StudentLogin() {
       if (type === 'aadhar') updatePayload.aadharFile = uploadData.url;
       if (type === 'sslc') updatePayload.sslcFile = uploadData.url;
       if (type === 'profile') updatePayload.profilePhoto = uploadData.url;
+      if (type === 'birthCert') updatePayload.birthCertFile = uploadData.url;
+      if (type === 'tc') updatePayload.tcFile = uploadData.url;
+      if (type === 'marklist') updatePayload.marklistFile = uploadData.url;
 
       const updateRes = await fetch("/api/my-profile", {
         method: "POST",
@@ -89,6 +103,20 @@ function StudentLogin() {
     } finally {
       setUploadingDoc(false);
     }
+  };
+
+  const handleProfileUpdate = async (updateData) => {
+    try {
+      const res = await fetch("/api/my-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(updateData)
+      });
+      if(res.ok) {
+        alert("Profile updated!");
+        fetchMyResults();
+      }
+    } catch(err) { alert("Update failed"); }
   };
 
   const downloadMarklist = (result) => {
@@ -160,7 +188,12 @@ function StudentLogin() {
     <section className="student-dashboard container py-5" style={{fontFamily: 'Inter, sans-serif'}}>
       <div className="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom border-secondary">
         <div>
-          <h2 className="fw-bold mb-1" style={{color: '#006d77'}}>Welcome, {studentInfo?.studentName}</h2>
+          <h2 className="fw-bold mb-1" style={{color: '#006d77'}}>
+            Welcome, {studentInfo?.studentName}
+            <span className={`ms-3 badge fs-6 ${studentInfo?.status === 'approved' ? 'bg-success' : studentInfo?.status === 'rejected' ? 'bg-danger' : 'bg-warning text-dark'}`}>
+              {studentInfo?.status?.toUpperCase() || 'PENDING APPROVAL'}
+            </span>
+          </h2>
           <p className="text-muted mb-0">Student ID: {studentInfo?._id?.slice(-6).toUpperCase()}</p>
         </div>
         <button onClick={logout} className="btn btn-outline-danger fw-bold rounded-pill px-4">Sign Out</button>
@@ -168,13 +201,14 @@ function StudentLogin() {
 
       <div className="d-flex border-bottom mb-4">
         <button className={`btn rounded-0 px-4 py-3 fw-bold ${activeTab === 'results' ? 'btn-teal-primary shadow-sm' : 'text-muted'}`} onClick={() => setActiveTab('results')}>🏆 My Results</button>
-        <button className={`btn rounded-0 px-4 py-3 fw-bold ${activeTab === 'profile' ? 'btn-teal-primary shadow-sm' : 'text-muted'}`} onClick={() => setActiveTab('profile')}>👤 My Profile & Documents</button>
+        <button className={`btn rounded-0 px-4 py-3 fw-bold ${activeTab === 'profile' ? 'active bg-teal-primary text-white shadow-sm' : 'text-muted'}`} onClick={() => setActiveTab('profile')}>👤 My Profile</button>
+        <button className={`btn rounded-0 px-4 py-3 fw-bold ${activeTab === 'notices' ? 'btn-teal-primary shadow-sm' : 'text-muted'}`} onClick={() => setActiveTab('notices')}>📢 Announcements ({notifications.length})</button>
       </div>
 
       {activeTab === 'profile' && (
         <div className="row g-4">
-          <div className="col-md-5">
-            <div className="card shadow-sm border-0 rounded-4 p-4 text-center">
+          <div className="col-md-4">
+            <div className="card shadow-sm border-0 rounded-4 p-4 text-center mb-4">
               <div className="mb-4 position-relative d-inline-block">
                 <img 
                   src={studentInfo?.profilePhoto || "/logo.png"} 
@@ -191,47 +225,111 @@ function StudentLogin() {
               <p className="text-muted mb-0">DOB: {studentInfo?.dob}</p>
               <p className="text-muted">Phone: {studentInfo?.phone}</p>
             </div>
+
+            <div className="card shadow-sm border-0 rounded-4 p-4">
+              <h5 className="fw-bold border-bottom pb-2 mb-3">Quick Actions</h5>
+              <div className="mb-3">
+                <label className="fw-bold small d-block mb-1">Update About Me</label>
+                <textarea className="form-control bg-light mb-2 small" rows="3" value={tempBio} onChange={e=>setTempBio(e.target.value)} />
+                <button className="btn btn-sm btn-teal-primary w-100" onClick={() => handleProfileUpdate({ bio: tempBio })}>Save Bio</button>
+              </div>
+            </div>
           </div>
           
-          <div className="col-md-7">
-            <div className="card shadow-sm border-0 rounded-4 p-4 h-100">
-              <h4 className="fw-bold border-bottom pb-3 mb-4">Official Documents</h4>
-              
-              <div className="mb-4">
-                <label className="fw-bold d-block mb-2">Aadhar Card</label>
-                {studentInfo?.aadharFile ? (
-                  <div className="d-flex align-items-center gap-3">
-                    <span className="badge bg-success py-2 px-3"><i className="bi bi-check-circle"></i> Uploaded</span>
-                    <a href={studentInfo.aadharFile} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-teal">View File</a>
-                    <label className="btn btn-sm btn-outline-secondary mb-0">
-                      Update <input type="file" className="d-none" onChange={e => handleDocumentUpload(e, 'aadhar')} />
-                    </label>
+          <div className="col-md-8">
+            <div className="card shadow-sm border-0 rounded-4 p-4 mb-4">
+              <h4 className="fw-bold border-bottom pb-3 mb-4 text-teal">Detailed Information</h4>
+              <div className="row g-3">
+                {[
+                  { label: "Father's Name", value: studentInfo?.fatherName, key: "fatherName" },
+                  { label: "Mother's Name", value: studentInfo?.motherName, key: "motherName" },
+                  { label: "Guardian Contact", value: studentInfo?.guardianPhone, key: "guardianPhone" },
+                  { label: "Email Address", value: studentInfo?.email, key: "email" },
+                  { label: "Blood Group", value: studentInfo?.bloodGroup, key: "bloodGroup" },
+                  { label: "Native Place", value: studentInfo?.place, key: "place" }
+                ].map(item => (
+                  <div className="col-md-6" key={item.key}>
+                    <label className="small fw-bold text-muted">{item.label}</label>
+                    <div className="d-flex gap-2">
+                       <input 
+                         className="form-control form-control-sm bg-light" 
+                         defaultValue={item.value || ""} 
+                         onBlur={(e) => {
+                           if(e.target.value !== item.value) handleProfileUpdate({ [item.key]: e.target.value });
+                         }}
+                       />
+                    </div>
                   </div>
-                ) : (
-                  <div>
-                    <span className="badge bg-danger py-2 px-3 mb-2">Pending</span>
-                    <input type="file" className="form-control bg-light mt-2" onChange={e => handleDocumentUpload(e, 'aadhar')} disabled={uploadingDoc} />
-                  </div>
-                )}
+                ))}
+                <div className="col-12 mt-3">
+                  <label className="small fw-bold text-muted">Residential Address</label>
+                  <textarea 
+                    className="form-control bg-light" 
+                    rows="2" 
+                    defaultValue={studentInfo?.address || ""}
+                    onBlur={(e) => {
+                      if(e.target.value !== studentInfo?.address) handleProfileUpdate({ address: e.target.value });
+                    }}
+                  />
+                </div>
               </div>
+            </div>
 
-              <div>
-                <label className="fw-bold d-block mb-2">SSLC / Previous Education Log</label>
-                {studentInfo?.sslcFile ? (
-                  <div className="d-flex align-items-center gap-3">
-                    <span className="badge bg-success py-2 px-3"><i className="bi bi-check-circle"></i> Uploaded</span>
-                    <a href={studentInfo.sslcFile} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-teal">View File</a>
-                    <label className="btn btn-sm btn-outline-secondary mb-0">
-                      Update <input type="file" className="d-none" onChange={e => handleDocumentUpload(e, 'sslc')} />
-                    </label>
+            <div className="card shadow-sm border-0 rounded-4 p-4">
+              <h4 className="fw-bold border-bottom pb-3 mb-4 text-teal">Mandatory Documents</h4>
+              <div className="row g-4">
+                {[
+                  { label: "Aadhar Card", key: "aadhar", file: studentInfo?.aadharFile },
+                  { label: "SSLC / Education Log", key: "sslc", file: studentInfo?.sslcFile },
+                  { label: "Birth Certificate", key: "birthCert", file: studentInfo?.birthCertFile },
+                  { label: "Transfer Certificate (TC)", key: "tc", file: studentInfo?.tcFile },
+                  { label: "Last Exam Marklist", key: "marklist", file: studentInfo?.marklistFile }
+                ].map(doc => (
+                  <div className="col-md-6" key={doc.key}>
+                    <div className="border rounded-3 p-3 bg-light h-100">
+                      <label className="fw-bold d-block mb-2 small">{doc.label}</label>
+                      {doc.file ? (
+                        <div className="d-flex align-items-center gap-2">
+                          <span className="badge bg-success small">✔️ OK</span>
+                          <a href={doc.file} target="_blank" rel="noreferrer" className="btn btn-xs btn-link text-teal p-0">View</a>
+                          <label className="btn btn-link text-secondary p-0 small ms-auto mb-0">
+                            Re-upload <input type="file" className="d-none" onChange={e => handleDocumentUpload(e, doc.key)} />
+                          </label>
+                        </div>
+                      ) : (
+                        <div>
+                          <input type="file" className="form-control form-control-sm" onChange={e => handleDocumentUpload(e, doc.key)} disabled={uploadingDoc} />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <div>
-                    <span className="badge bg-danger py-2 px-3 mb-2">Pending</span>
-                    <input type="file" className="form-control bg-light mt-2" onChange={e => handleDocumentUpload(e, 'sslc')} disabled={uploadingDoc} />
-                  </div>
-                )}
+                ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'notices' && (
+        <div className="row justify-content-center">
+          <div className="col-lg-8">
+            <h3 className="mb-4 fw-bold">Campus Announcements</h3>
+            <div className="list-group shadow-sm border-0">
+              {notifications.map(n => (
+                <div key={n._id} className={`list-group-item border-0 shadow-sm mb-3 rounded-4 p-4 ${n.type === 'urgent' ? 'bg-light-danger border-start border-danger border-5' : 'bg-white border-start border-teal border-5'}`}>
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <h5 className="fw-bold mb-0 text-teal">{n.title}</h5>
+                    <span className="badge bg-light text-dark border small">{new Date(n.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <p className="mb-0 text-secondary">{n.message}</p>
+                </div>
+              ))}
+              {notifications.length === 0 && (
+                <div className="text-center py-5 text-muted">
+                  <span className="display-4 d-block mb-3">📭</span>
+                  <p>No new announcements at this time.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

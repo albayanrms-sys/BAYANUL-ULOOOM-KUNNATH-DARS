@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { User, Setting, Student, Result, GalleryItem } from './models.js';
+import { User, Setting, Student, Result, GalleryItem, Notification } from './models.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'bayanululoomsecret';
@@ -54,22 +54,24 @@ router.post('/my-profile', auth, async (req, res) => {
 router.get('/settings/admission', async (req, res) => {
   let setting = await Setting.findOne({ key: 'admissionActive' });
   if (!setting) {
-    setting = await Setting.create({ key: 'admissionActive', value: { active: true, message: '' } });
+    setting = await Setting.create({ key: 'admissionActive', value: { active: true, message: '', deadline: null } });
   }
   res.json(setting.value);
 });
 
 router.post('/settings/admission', auth, isAdmin, async (req, res) => {
-  const { active, message } = req.body;
-  await Setting.findOneAndUpdate({ key: 'admissionActive' }, { value: { active, message } }, { upsert: true });
+  const { active, message, deadline } = req.body;
+  await Setting.findOneAndUpdate({ key: 'admissionActive' }, { value: { active, message, deadline } }, { upsert: true });
   res.json({ message: 'Settings updated successfully', active });
 });
 
 // Public Admission Submission
 router.post('/admissions', async (req, res) => {
   const setting = await Setting.findOne({ key: 'admissionActive' });
-  if (setting && setting.value?.active === false) {
-    return res.status(400).json({ error: `Admissions are closed. ${setting.value.message || ''}` });
+  const isPastDeadline = setting?.value?.deadline && new Date(setting.value.deadline) < new Date();
+  
+  if (setting && (setting.value?.active === false || isPastDeadline)) {
+    return res.status(400).json({ error: `Admissions are closed. ${isPastDeadline ? 'The deadline has passed.' : (setting.value.message || '')}` });
   }
   
   const existingUser = await User.findOne({ username: req.body.phone });
@@ -101,6 +103,13 @@ router.post('/admissions', async (req, res) => {
 router.get('/students', auth, isAdmin, async (req, res) => {
   const students = await Student.find().sort({ createdAt: -1 });
   res.json(students);
+});
+
+// Update Student Status (Admin)
+router.patch('/students/:id/status', auth, isAdmin, async (req, res) => {
+  const { status } = req.body;
+  const student = await Student.findByIdAndUpdate(req.params.id, { status }, { new: true });
+  res.json({ message: `Student status updated to ${status}`, student });
 });
 
 // Delete Student (Admin)
@@ -165,6 +174,23 @@ router.post('/admin/change-password', auth, isAdmin, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Failed to update password' });
   }
+});
+
+// Notifications
+router.get('/notifications', async (req, res) => {
+  const notifications = await Notification.find().sort({ createdAt: -1 });
+  res.json(notifications);
+});
+
+router.post('/notifications', auth, isAdmin, async (req, res) => {
+  const notification = new Notification(req.body);
+  await notification.save();
+  res.json({ message: 'Notification created', notification });
+});
+
+router.delete('/notifications/:id', auth, isAdmin, async (req, res) => {
+  await Notification.findByIdAndDelete(req.params.id);
+  res.json({ message: 'Notification deleted' });
 });
 
 export default router;
