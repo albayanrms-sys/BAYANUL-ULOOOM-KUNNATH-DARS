@@ -166,11 +166,11 @@ function Admin() {
           <form onSubmit={handleLogin}>
             <div className="mb-3 text-start">
               <label className="form-label text-muted small px-1 fw-bold">Username</label>
-              <input type="text" className="form-control p-3 bg-light" placeholder="ramees baqavi" value={username} onChange={e=>setUsername(e.target.value)} required />
+              <input type="text" className="form-control p-3 bg-light" value={username} onChange={e=>setUsername(e.target.value)} required />
             </div>
             <div className="mb-4 text-start">
               <label className="form-label text-muted small px-1 fw-bold">Password</label>
-              <input type="password" className="form-control p-3 bg-light" placeholder="remees786" value={password} onChange={e=>setPassword(e.target.value)} required />
+              <input type="password" className="form-control p-3 bg-light" value={password} onChange={e=>setPassword(e.target.value)} required />
             </div>
             <button type="submit" className="btn btn-teal-primary w-100 py-3 fw-bold rounded-pill shadow-sm">SECURE LOGIN</button>
           </form>
