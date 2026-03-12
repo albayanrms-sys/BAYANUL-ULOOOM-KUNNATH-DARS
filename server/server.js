@@ -27,13 +27,21 @@ const initializeAdmin = async () => {
   try {
     const adminExists = await User.findOne({ username: 'ramees baqavi' });
     if (!adminExists) {
-      const hashedPassword = await bcrypt.hash('remees786', 10);
+      const hashedPassword = await bcrypt.hash('ramees786', 10);
       await User.create({
         username: 'ramees baqavi',
         password: hashedPassword,
         role: 'admin'
       });
       console.log('✅ Admin initialized');
+    } else {
+      // Also update if it's the old typo version
+      const isOldPassword = await bcrypt.compare('remees786', adminExists.password);
+      if (isOldPassword) {
+        adminExists.password = await bcrypt.hash('ramees786', 10);
+        await adminExists.save();
+        console.log('✅ Admin password updated to correct spelling');
+      }
     }
   } catch(err) {
     console.error('Admin init error:', err);

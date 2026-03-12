@@ -24,6 +24,10 @@ function Admin() {
   const [galleryFile, setGalleryFile] = useState(null);
   const [galleryItems, setGalleryItems] = useState([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  
+  // Security states
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordChangeMsg, setPasswordChangeMsg] = useState({ text: "", type: "" });
 
   useEffect(() => {
     if (token) {
@@ -158,6 +162,30 @@ function Admin() {
     fetchGallery();
   };
 
+  const changeAdminPassword = async (e) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      setPasswordChangeMsg({ text: "Password must be at least 6 characters!", type: "error" });
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ newPassword })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPasswordChangeMsg({ text: "Password updated successfully!", type: "success" });
+        setNewPassword("");
+      } else {
+        setPasswordChangeMsg({ text: data.error || "Update failed", type: "error" });
+      }
+    } catch (err) {
+      setPasswordChangeMsg({ text: "Network error", type: "error" });
+    }
+  };
+
   if (!token) {
     return (
       <section className="admin-login container py-5 d-flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
@@ -190,6 +218,7 @@ function Admin() {
             <button className={`nav-link text-start rounded text-white ${activeTab === 'results' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('results')}>📝 Publish Results</button>
             <button className={`nav-link text-start rounded text-white ${activeTab === 'gallery' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('gallery')}>📸 Gallery Uploads</button>
             <button className={`nav-link text-start rounded text-white ${activeTab === 'settings' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('settings')}>⚙️ Settings / Notices</button>
+            <button className={`nav-link text-start rounded text-white ${activeTab === 'security' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('security')}>🔐 Change Password</button>
           </div>
           <button className="btn btn-outline-light w-100 rounded-pill mt-5 fw-bold" onClick={logout}>Sign Out</button>
         </div>
@@ -336,7 +365,7 @@ function Admin() {
             </div>
           )}
 
-          {activeTab === 'gallery' && (
+           {activeTab === 'gallery' && (
             <div>
               <h2 className="mb-4 fw-bold">Manage Gallery</h2>
               
@@ -380,6 +409,36 @@ function Admin() {
                   </div>
                 ))}
                 {galleryItems.length === 0 && <p className="text-muted w-100 mt-4 ms-3">No gallery items uploaded yet.</p>}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'security' && (
+            <div style={{maxWidth: "500px"}}>
+              <h2 className="mb-4 fw-bold">Security Settings</h2>
+              <div className="card shadow-sm border rounded-4 p-4 bg-white">
+                <h5 className="mb-3 text-teal fw-bold">Change Admin Password</h5>
+                {passwordChangeMsg.text && (
+                  <div className={`alert ${passwordChangeMsg.type === 'success' ? 'alert-success' : 'alert-danger'} small py-2`}>
+                    {passwordChangeMsg.text}
+                  </div>
+                )}
+                <form onSubmit={changeAdminPassword}>
+                  <div className="mb-4">
+                    <label className="form-label text-muted small fw-bold">New Secure Password</label>
+                    <input 
+                      type="password" 
+                      className="form-control p-3 bg-light" 
+                      value={newPassword} 
+                      onChange={(e) => setNewPassword(e.target.value)} 
+                      placeholder="Enter new password"
+                      required
+                      minLength="6"
+                    />
+                    <div className="form-text mt-2 small">Min 6 characters. Use a strong password for security.</div>
+                  </div>
+                  <button type="submit" className="btn btn-teal-primary w-100 py-3 rounded shadow-sm fw-bold">Update Password</button>
+                </form>
               </div>
             </div>
           )}

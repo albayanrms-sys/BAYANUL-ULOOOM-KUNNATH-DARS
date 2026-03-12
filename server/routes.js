@@ -152,4 +152,19 @@ router.delete('/gallery/:id', auth, isAdmin, async (req, res) => {
   res.json({ message: 'Gallery item deleted' });
 });
 
+// Change Password (Admin)
+router.post('/admin/change-password', auth, isAdmin, async (req, res) => {
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  }
+  try {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await User.findByIdAndUpdate(req.user.id, { password: hashedPassword });
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update password' });
+  }
+});
+
 export default router;
