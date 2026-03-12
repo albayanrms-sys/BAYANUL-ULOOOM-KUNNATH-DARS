@@ -93,6 +93,7 @@ app.get('/api/health', (req, res) => {
     status: 'ok', 
     message: 'Backend is running',
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    db_state: mongoose.connection.readyState,
     db_uri_status: process.env.MONGODB_URI ? 'present' : 'missing',
     db_error: lastDbError
   });
