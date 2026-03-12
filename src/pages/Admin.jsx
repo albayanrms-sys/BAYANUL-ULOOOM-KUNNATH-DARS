@@ -1,30 +1,121 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./Admin.css";
 
 function Admin() {
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [token, setToken] = useState(localStorage.getItem('adminToken'));
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  
+  // Dashboard states
+  const [activeTab, setActiveTab] = useState("overview");
+  const [students, setStudents] = useState([]);
+  const [admissionActive, setAdmissionActive] = useState(true);
+  const [admissionMsg, setAdmissionMsg] = useState("");
+  const [results, setResults] = useState([]);
 
-  const handleLogin = (e) => {
+  // Result Form
+  const [resultStudent, setResultStudent] = useState("");
+  const [examName, setExamName] = useState("");
+  const [totalMarks, setTotalMarks] = useState("");
+  const [grade, setGrade] = useState("");
+
+  useEffect(() => {
+    if (token) {
+      fetchStudents();
+      fetchSettings();
+      fetchResults();
+    }
+  }, [token]);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (password === "dars2026") {
-      setLoggedIn(true);
-    } else {
-      alert("പാസ്‌വേഡ് തെറ്റാണ്! (Hint: dars2026)");
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (res.ok && data.role === 'admin') {
+        localStorage.setItem("adminToken", data.token);
+        setToken(data.token);
+      } else {
+        alert(data.error || "Login Failed");
+      }
+    } catch(err) {
+      alert("Network Error");
     }
   };
 
-  if (!loggedIn) {
+  const logout = () => {
+    localStorage.removeItem("adminToken");
+    setToken(null);
+  };
+
+  const fetchStudents = async () => {
+    const res = await fetch("/api/students", { headers: { Authorization: `Bearer ${token}` } });
+    if(res.ok) setStudents(await res.json());
+  };
+
+  const fetchSettings = async () => {
+    const res = await fetch("/api/settings/admission");
+    if(res.ok) {
+      const data = await res.json();
+      setAdmissionActive(data.active);
+      setAdmissionMsg(data.message || "");
+    }
+  };
+
+  const fetchResults = async () => {
+    const res = await fetch("/api/results", { headers: { Authorization: `Bearer ${token}` } });
+    if(res.ok) setResults(await res.json());
+  };
+
+  const updateSetting = async (e) => {
+    e.preventDefault();
+    const res = await fetch("/api/settings/admission", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ active: admissionActive, message: admissionMsg })
+    });
+    if(res.ok) alert("Settings Updated!");
+  };
+
+  const deleteStudent = async (id) => {
+    if(!window.confirm("Delete this student permanently?")) return;
+    await fetch(`/api/students/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    fetchStudents();
+  };
+
+  const publishResult = async (e) => {
+    e.preventDefault();
+    const res = await fetch("/api/results", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ student: resultStudent, examName, totalMarks: Number(totalMarks), grade })
+    });
+    if(res.ok) {
+      alert("Result Published");
+      setResultStudent(""); setExamName(""); setTotalMarks(""); setGrade("");
+      fetchResults();
+    }
+  };
+
+  if (!token) {
     return (
       <section className="admin-login container py-5 d-flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
-        <div className="card glass-card p-4 mx-auto text-center" style={{ maxWidth: '400px' }}>
-          <h2 className="mb-4">അഡ്മിൻ ലോഗിൻ</h2>
+        <div className="card glass-card p-4 mx-auto text-center shadow-lg border-0" style={{ maxWidth: '400px', width: '100%' }}>
+          <h2 className="mb-4 text-teal fw-bold">ADMIN LOGIN</h2>
           <form onSubmit={handleLogin}>
-            <div className="mb-4 text-start">
-              <label className="form-label text-muted small opacity-80 px-1">പാസ്‌വേഡ്</label>
-              <input type="password" name="password" className="form-control" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <div className="mb-3 text-start">
+              <label className="form-label text-muted small px-1 fw-bold">Username</label>
+              <input type="text" className="form-control p-3 bg-light" placeholder="ramees baqavi" value={username} onChange={e=>setUsername(e.target.value)} required />
             </div>
-            <button type="submit" className="btn btn-teal-primary w-100 py-3 fw-bold">ലോഗിൻ</button>
+            <div className="mb-4 text-start">
+              <label className="form-label text-muted small px-1 fw-bold">Password</label>
+              <input type="password" className="form-control p-3 bg-light" placeholder="remees786" value={password} onChange={e=>setPassword(e.target.value)} required />
+            </div>
+            <button type="submit" className="btn btn-teal-primary w-100 py-3 fw-bold rounded-pill shadow-sm">SECURE LOGIN</button>
           </form>
         </div>
       </section>
@@ -32,41 +123,158 @@ function Admin() {
   }
 
   return (
-    <section className="admin-dashboard container py-5">
-      <div className="row g-4">
-        <div className="col-12 text-center mb-4">
-          <h2 className="mb-3">അഡ്മിൻ ഡാഷ്ബോർഡ്</h2>
-          <p className="text-muted fs-5">ഇവിടെ നിങ്ങൾക്ക് വിദ്യാർത്ഥികളുടെ പട്ടികയും, ഉസ്താദുകളെയും മാനേജ് ചെയ്യാം.</p>
+    <div className="admin-dashboard container-fluid bg-light min-vh-100 p-0" style={{fontFamily: 'Inter, sans-serif'}}>
+      <div className="row g-0">
+        <div className="col-md-3 bg-dark-teal text-white min-vh-100 p-4 shadow-lg sidebar">
+          <h4 className="mb-4 text-center pb-3 border-bottom border-secondary fw-bold">ADMIN PANEL</h4>
+          <div className="nav flex-column nav-pills gap-2 text-start">
+            <button className={`nav-link text-start rounded text-white ${activeTab === 'overview' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('overview')}>📊 Dashboard</button>
+            <button className={`nav-link text-start rounded text-white ${activeTab === 'students' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('students')}>👨‍🎓 Students List</button>
+            <button className={`nav-link text-start rounded text-white ${activeTab === 'results' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('results')}>📝 Publish Results</button>
+            <button className={`nav-link text-start rounded text-white ${activeTab === 'settings' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('settings')}>⚙️ Settings / Notices</button>
+          </div>
+          <button className="btn btn-outline-light w-100 rounded-pill mt-5 fw-bold" onClick={logout}>Sign Out</button>
         </div>
         
-        <div className="col-md-4">
-          <div className="card admin-stat-card glass-card p-4 h-100 text-center border-teal-soft">
-            <span className="fs-1 mb-3">🎓</span>
-            <h3 className="h5 mb-2">വിദ്യാർത്ഥികൾ</h3>
-            <p className="text-muted small">വിദ്യാർത്ഥികളുടെ വിവരങ്ങൾ ചേർക്കുക അല്ലെങ്കിൽ മാറ്റങ്ങൾ വരുത്തുക</p>
-            <button className="btn btn-outline-teal w-100 mt-auto">കാണുക</button>
-          </div>
-        </div>
-        
-        <div className="col-md-4">
-          <div className="card admin-stat-card glass-card p-4 h-100 text-center border-teal-soft">
-            <span className="fs-1 mb-3">🧔</span>
-            <h3 className="h5 mb-2">ഉസ്താദുകൾ</h3>
-            <p className="text-muted small">ഉസ്താദുമാരുടെ പ്രൊഫൈലുകൾ മാനേജ് ചെയ്യുക</p>
-            <button className="btn btn-outline-teal w-100 mt-auto">കാണുക</button>
-          </div>
-        </div>
-        
-        <div className="col-md-4">
-          <div className="card admin-stat-card glass-card p-4 h-100 text-center border-teal-soft">
-            <span className="fs-1 mb-3">📝</span>
-            <h3 className="h5 mb-2">അഡ്മിഷൻ അപേക്ഷകൾ</h3>
-            <p className="text-muted small">പുതിയ അപേക്ഷകൾ പരിശോധിക്കാം</p>
-            <button className="btn btn-outline-teal w-100 mt-auto">പരിശോധിക്കാം</button>
-          </div>
+        <div className="col-md-9 p-5 bg-white overflow-auto pb-5">
+          {activeTab === 'overview' && (
+            <div>
+              <h2 className="mb-4 fw-bold">Dashboard Overview</h2>
+              <div className="row g-4">
+                <div className="col-md-4">
+                  <div className="card p-4 bg-light-teal border-0 shadow-sm rounded-4 text-center">
+                    <h3 className="display-4 fw-bold text-teal">{students.length}</h3>
+                    <p className="text-muted mb-0 fw-medium">Total Students</p>
+                  </div>
+                </div>
+                <div className="col-md-4">
+                  <div className="card p-4 bg-light border-0 shadow-sm rounded-4 text-center">
+                    <h3 className="display-4 fw-bold text-teal">{results.length}</h3>
+                    <p className="text-muted mb-0 fw-medium">Results Published</p>
+                  </div>
+                </div>
+                <div className="col-md-4">
+                  <div className="card p-4 bg-light border-0 shadow-sm rounded-4 text-center">
+                    <h3 className={`display-5 my-2 fw-bold ${admissionActive ? "text-success" : "text-danger"}`}>
+                      {admissionActive ? "OPEN" : "CLOSED"}
+                    </h3>
+                    <p className="text-muted mb-0 fw-medium">Admissions</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'students' && (
+            <div>
+              <h2 className="mb-4 fw-bold">Student Directory</h2>
+              <div className="table-responsive bg-white shadow-sm rounded-4 p-3 border">
+                <table className="table table-hover align-middle mb-0">
+                  <thead className="table-light">
+                    <tr>
+                      <th className="text-muted">NAME</th>
+                      <th className="text-muted">PHONE/USER</th>
+                      <th className="text-muted">DOB/PASSWD</th>
+                      <th className="text-muted">APPLIED</th>
+                      <th className="text-muted text-end">ACTION</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {students.map(s => (
+                      <tr key={s._id}>
+                        <td className="fw-bold fs-6">{s.studentName}</td>
+                        <td className="font-monospace text-teal">{s.phone}</td>
+                        <td className="font-monospace text-secondary">{s.dob}</td>
+                        <td>{new Date(s.createdAt).toLocaleDateString()}</td>
+                        <td className="text-end">
+                          <button className="btn btn-sm btn-outline-danger shadow-sm rounded border-0 fw-bold px-3 py-1" onClick={() => deleteStudent(s._id)}>Remove</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {students.length === 0 && <tr><td colSpan="5" className="text-center text-muted py-5">No students found</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-3 small text-muted">* Student login credentials are automatically set to Phone (username) and DOB (password).</p>
+            </div>
+          )}
+
+          {activeTab === 'settings' && (
+            <div style={{maxWidth: "600px"}}>
+              <h2 className="mb-4 fw-bold">System Settings</h2>
+              <div className="card shadow-sm border rounded-4 p-4 mb-4">
+                <h5 className="mb-3 text-teal fw-bold">Admission Controls</h5>
+                <form onSubmit={updateSetting}>
+                  <div className="form-check form-switch mb-3 ps-5">
+                    <input className="form-check-input fs-4 ms-n5" type="checkbox" id="admissionToggle" checked={admissionActive} onChange={(e) => setAdmissionActive(e.target.checked)} />
+                    <label className="form-check-label ms-2 mt-1 fw-bold fs-5" htmlFor="admissionToggle">
+                      Admissions Open
+                    </label>
+                  </div>
+                  <div className="mb-4">
+                    <label className="form-label text-muted small fw-bold">Admission Notice / Alert Box</label>
+                    <input type="text" className="form-control p-3 bg-light" value={admissionMsg} onChange={(e) => setAdmissionMsg(e.target.value)} placeholder="(e.g. 'Admissions close in 7 days!')" />
+                    <div className="form-text mt-2">This notice will be displayed immediately to the public on the admission page.</div>
+                  </div>
+                  <button type="submit" className="btn btn-teal-primary w-100 py-3 rounded shadow-sm fw-bold">Save Changes</button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'results' && (
+            <div>
+              <h2 className="mb-4 fw-bold">Publish Results</h2>
+              <div className="card shadow-sm border rounded-4 p-4 mb-5 bg-white">
+                <form onSubmit={publishResult} className="row g-4 align-items-end">
+                  <div className="col-md-4">
+                    <label className="form-label fw-bold text-muted small">Select Student</label>
+                    <select className="form-select p-3 bg-light" value={resultStudent} onChange={e=>setResultStudent(e.target.value)} required>
+                      <option value="">-- Choose Student --</option>
+                      {students.map(s => <option key={s._id} value={s._id}>{s.studentName} ({s.phone})</option>)}
+                    </select>
+                  </div>
+                  <div className="col-md-4">
+                    <label className="form-label fw-bold text-muted small">Exam Name</label>
+                    <input type="text" className="form-control p-3 bg-light" placeholder="Mid Term 2026" value={examName} onChange={e=>setExamName(e.target.value)} required />
+                  </div>
+                  <div className="col-md-2">
+                    <label className="form-label fw-bold text-muted small">Marks Output</label>
+                    <input type="number" className="form-control p-3 bg-light" placeholder="e.g. 500" value={totalMarks} onChange={e=>setTotalMarks(e.target.value)} required />
+                  </div>
+                  <div className="col-md-2">
+                    <label className="form-label fw-bold text-muted small">Grade</label>
+                    <input type="text" className="form-control p-3 bg-light" placeholder="A+" value={grade} onChange={e=>setGrade(e.target.value)} required />
+                  </div>
+                  <div className="col-12 mt-4 text-end">
+                    <button type="submit" className="btn btn-teal-primary px-5 py-3 rounded shadow-sm fw-bold w-100">Publish Now</button>
+                  </div>
+                </form>
+              </div>
+
+              <h4 className="mb-3 fw-bold">Published Results Log</h4>
+              <div className="table-responsive shadow-sm rounded-4 border bg-white p-2">
+                <table className="table table-hover mb-0 align-middle">
+                  <thead className="table-light"><tr><th className="text-muted">STUDENT</th><th className="text-muted">EXAM</th><th className="text-muted">TOTAL SCORE</th><th className="text-muted">GRADE</th><th className="text-muted">DATE</th></tr></thead>
+                  <tbody>
+                    {results.map(r => (
+                      <tr key={r._id}>
+                        <td className="fw-bold">{r.student?.studentName || "Deleted User"}</td>
+                        <td>{r.examName}</td>
+                        <td className="fw-bold">{r.totalMarks}</td>
+                        <td><span className="badge bg-success py-2 px-3">{r.grade}</span></td>
+                        <td className="text-muted small">{new Date(r.publishedDate).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                    {results.length === 0 && <tr><td colSpan="5" className="text-center py-5 text-muted">No results</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 

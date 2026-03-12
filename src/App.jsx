@@ -27,8 +27,7 @@ function Header() {
         <NavLink className="navbar-brand d-flex align-items-center gap-2" to="/">
           <img src="/logo.png" alt="Logo" width="45" height="45" className="rounded-circle logo-glow" />
           <div className="brand-text">
-            <span className="brand-title">ബായനുൽ ഉലൂം ദർസ്</span>
-            <span className="brand-subtitle">BAYANUL ULOOM DARS</span>
+            <span className="brand-title">BAYANUL ULOOM DARS</span>
           </div>
         </NavLink>
         
@@ -39,19 +38,19 @@ function Header() {
         <div className="collapse navbar-collapse" id="navbarNav">
           <ul className="navbar-nav mx-auto nav-links">
             <li className="nav-item">
-              <NavLink className="nav-link" to="/" end>ഹോം <small>HOME</small></NavLink>
+              <NavLink className="nav-link" to="/" end>HOME</NavLink>
             </li>
             <li className="nav-item">
-              <NavLink className="nav-link" to="/about">ഞങ്ങളെക്കുറിച്ച് <small>ABOUT US</small></NavLink>
+              <NavLink className="nav-link" to="/about">ABOUT US</NavLink>
             </li>
             <li className="nav-item">
-              <NavLink className="nav-link" to="/gallery">ഗാലറി <small>GALLERY</small></NavLink>
+              <NavLink className="nav-link" to="/gallery">GALLERY</NavLink>
             </li>
             <li className="nav-item">
-              <NavLink className="nav-link" to="/admission">അഡ്മിഷൻ <small>ADMISSION</small></NavLink>
+              <NavLink className="nav-link" to="/admission">ADMISSION</NavLink>
             </li>
             <li className="nav-item">
-              <NavLink className="nav-link" to="/contact">ബന്ധപ്പെടുക <small>CONTACT</small></NavLink>
+              <NavLink className="nav-link" to="/contact">CONTACT</NavLink>
             </li>
           </ul>
           
@@ -76,21 +75,21 @@ function Footer() {
         <div className="row g-4">
           <div className="col-lg-4">
             <div className="footer-brand border-bottom-teal pb-3 mb-3">
-              <h4 className="footer-title">ബായനുൽ ഉലൂം ദർസ്</h4>
-              <p className="footer-desc">പരമ്പരാഗത മൂല്യങ്ങളും ആധുനിക അറിവുകളും കൂട്ടിയിണക്കുന്ന ഉൽകൃഷ്ട വിദ്യാലയം.</p>
+              <h4 className="footer-title">BAYANUL ULOOM DARS</h4>
+              <p className="footer-desc">A premier educational institution blending traditional values with modern knowledge.</p>
             </div>
           </div>
           <div className="col-lg-4">
-            <h5 className="footer-subtitle">ദ്രുത ലിങ്കുകൾ</h5>
+            <h5 className="footer-subtitle">Quick Links</h5>
             <ul className="footer-links list-unstyled">
-              <li><NavLink to="/about">ഞങ്ങളെക്കുറിച്ച്</NavLink></li>
-              <li><NavLink to="/gallery">ഗാലറി</NavLink></li>
-              <li><NavLink to="/admission">അഡ്മിഷൻ</NavLink></li>
-              <li><NavLink to="/contact">ബന്ധപ്പെടുക</NavLink></li>
+              <li><NavLink to="/about">About Us</NavLink></li>
+              <li><NavLink to="/gallery">Gallery</NavLink></li>
+              <li><NavLink to="/admission">Admission</NavLink></li>
+              <li><NavLink to="/contact">Contact</NavLink></li>
             </ul>
           </div>
           <div className="col-lg-4">
-            <h5 className="footer-subtitle">ബന്ധപ്പെടുക</h5>
+            <h5 className="footer-subtitle">Contact Us</h5>
             <div className="footer-contact">
               <a href="mailto:albayanrms@gmail.com" className="d-block mb-2">📧 albayanrms@gmail.com</a>
               <a href="tel:+919745304342" className="d-block mb-1">📞 97453 04342</a>
