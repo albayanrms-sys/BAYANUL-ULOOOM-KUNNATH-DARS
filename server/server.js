@@ -88,7 +88,14 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 app.use(express.static(path.resolve(__dirname, '..', 'dist')));
 
 // Simple health‑check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  // Wait up to 3 seconds for connection if it's currently connecting
+  let attempts = 0;
+  while (mongoose.connection.readyState === 2 && attempts < 15) {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    attempts++;
+  }
+  
   res.json({ 
     status: 'ok', 
     message: 'Backend is running',
