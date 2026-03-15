@@ -62,34 +62,33 @@ function Header() {
             </li>
           </ul>
           
-          <div className="d-flex align-items-center gap-3 mt-3 mt-xl-0">
             <div className="dropdown">
-              <button className="btn btn-premium dropdown-toggle fw-bold rounded-pill px-4 shadow-sm" type="button" data-bs-toggle="dropdown">
-                <i className="bi bi-person-circle fs-5 me-2"></i>
-                <span>PORTAL LOGIN</span>
+              <button className="btn btn-teal-solid dropdown-toggle fw-bold rounded-pill px-4" type="button" data-bs-toggle="dropdown">
+                <i className="bi bi-shield-lock-fill fs-5 me-2"></i>
+                <span>LOGIN</span>
               </button>
-              <ul className="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 mt-3 overflow-hidden animate-up">
+              <ul className="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 mt-2 overflow-hidden">
                 <li>
                   <NavLink className="dropdown-item py-3 d-flex align-items-center gap-3" to="/student-login" onClick={closeMenu}>
-                      <span className="fs-3 bg-primary bg-opacity-10 p-2 rounded-circle">🎓</span>
+                      <span className="fs-4">🎓</span>
                       <div>
                         <div className="fw-bold">Student Portal</div>
-                        <div className="x-small text-muted">View results & docs</div>
+                        <div className="small text-muted">View results & docs</div>
                       </div>
                   </NavLink>
                 </li>
+                <hr className="dropdown-divider m-0 opacity-10"/>
                 <li>
-                  <NavLink className="dropdown-item py-3 d-flex align-items-center gap-3 bg-light" to="/admin" onClick={closeMenu}>
-                      <span className="fs-3 bg-secondary bg-opacity-10 p-2 rounded-circle">🛡️</span>
+                  <NavLink className="dropdown-item py-3 d-flex align-items-center gap-3" to="/admin" onClick={closeMenu}>
+                      <span className="fs-4">🛡️</span>
                       <div>
-                        <div className="fw-bold">Admin Authority</div>
-                        <div className="x-small text-muted">Secure management</div>
+                        <div className="fw-bold">Admin Panel</div>
+                        <div className="small text-muted">Management access</div>
                       </div>
                   </NavLink>
                 </li>
               </ul>
             </div>
-          </div>
         </div>
       </div>
     </nav>
@@ -140,10 +139,10 @@ function Footer() {
                      </a>
                   </div>
                </div>
-               <div className="col-sm-6 text-sm-end">
-                  <h6 className="fw-bold text-white">LOCATION</h6>
-                  <p className="text-white-50 small mb-0">Al Bayan Kunnath Dars,<br/>Kunnath Mahallu, India</p>
-               </div>
+                <div className="col-sm-6 text-sm-end">
+                   <h6 className="fw-bold text-white text-uppercase small">Find Us</h6>
+                   <p className="text-white-50 small mb-0">SH 72, Oorakam,<br/>Kerala - 676519, India</p>
+                </div>
             </div>
           </div>
         </div>

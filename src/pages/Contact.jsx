@@ -40,10 +40,13 @@ function Contact() {
                   ))}
                </div>
 
-               <div className="mt-5 p-4 rounded-4 bg-light text-center">
+               <div className="mt-5 p-4 rounded-4 bg-light text-center transition-all hover-translate-up shadow-sm">
                   <i className="bi bi-geo-alt-fill text-primary fs-3 mb-2 d-block"></i>
-                  <span className="fw-bold d-block">Location</span>
-                  <p className="small text-muted mb-0">Kunnath Mahallu, India</p>
+                  <span className="fw-bold d-block mb-1">Our Location</span>
+                  <p className="small text-muted mb-3">SH 72, Oorakam, Kerala 676519</p>
+                  <a href="https://www.google.com/maps/place/SH+72,+Oorakam,+Kerala+676519/@11.0554217,76.0022257,3a,75y,331.17h,96.46t/data=!3m7!1e1!3m5!1sDGn9hNTt1GTswEnKsaliFA!2e0!6shttps:%2F%2Fstreetviewpixels-pa.googleapis.com%2Fv1%2Fthumbnail%3Fcb_client%3Dmaps_sv.tactile%26w%3D900%26h%3D600%26pitch%3D-6.4588081337761025%26panoid%3DDGn9hNTt1GTswEnKsaliFA%26yaw%3D331.1665166209837!7i13312!8i6656!4m6!3m5!1s0x3ba64b79b3d9fc13:0xcf9e20707d66c0e7!8m2!3d11.0551686!4d76.0020158!16s%2Fg%2F11j5h647d0?hl=en&entry=ttu&g_ep=EgoyMDI2MDMxMS4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noreferrer" className="btn btn-outline-primary btn-sm rounded-pill px-4 fw-bold">
+                    <i className="bi bi-map me-2"></i>VIEW ON GOOGLE MAPS
+                  </a>
                </div>
             </div>
           </div>
