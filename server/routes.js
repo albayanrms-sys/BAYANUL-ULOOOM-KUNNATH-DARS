@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User, Setting, Student, Result, GalleryItem, Poster, Notification } from './models.js';
+import { upload } from './upload.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'bayanululoomsecret';
@@ -214,8 +215,12 @@ router.get('/gallery', async (req, res) => {
 });
 
 // Add Gallery items (Admin)
-router.post('/gallery', auth, isAdmin, async (req, res) => {
-  const item = new GalleryItem(req.body);
+router.post('/gallery', auth, isAdmin, upload.single('file'), async (req, res) => {
+  const { title, type } = req.body;
+  const url = req.file ? req.file.path : req.body.url;
+  if (!url) return res.status(400).json({ error: 'No image provided' });
+  
+  const item = new GalleryItem({ title, type, url });
   await item.save();
   res.json(item);
 });
@@ -232,8 +237,12 @@ router.get('/posters', async (req, res) => {
   res.json(posters);
 });
 
-router.post('/posters', auth, isAdmin, async (req, res) => {
-  const poster = new Poster(req.body);
+router.post('/posters', auth, isAdmin, upload.single('file'), async (req, res) => {
+  const { title } = req.body;
+  const url = req.file ? req.file.path : null;
+  if (!url) return res.status(400).json({ error: 'No poster image provided' });
+
+  const poster = new Poster({ title, url });
   await poster.save();
   res.json(poster);
 });

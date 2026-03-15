@@ -4,12 +4,10 @@ import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import multer from 'multer';
-import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import apiRoutes from './routes.js';
 import { User } from './models.js';
 import bcrypt from 'bcryptjs';
+import { upload } from './upload.js';
 
 dotenv.config();
 
@@ -44,31 +42,14 @@ const initializeAdmin = async () => {
   }
 };
 
-// Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'al-bayan-assets',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
-    resource_type: 'auto'
-  }
-});
-export const upload = multer({ storage });
-
-// API Routes
-app.use('/api', apiRoutes);
-
-// Dedicated Upload Route (to ensure it works correctly)
+// Dedicated Upload Route (Ensure this is BEFORE app.use('/api', apiRoutes))
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   res.json({ url: req.file.path, message: 'File uploaded successfully' });
 });
+
+// API Routes
+app.use('/api', apiRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', db: mongoose.connection.readyState }));
 

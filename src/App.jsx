@@ -29,22 +29,6 @@ function Header() {
     }
   };
 
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Al Bayan Kunnath Dars',
-          text: 'Check out the official website of Al Bayan Kunnath Dars Academy.',
-          url: window.location.origin,
-        });
-      } catch (err) {
-        console.log('Share failed');
-      }
-    } else {
-      navigator.clipboard.writeText(window.location.origin);
-      alert("Link copied to clipboard!");
-    }
-  };
 
   return (
     <nav className="navbar navbar-expand-xl navbar-dark sticky-top glass-nav px-lg-4" id="mainNav">
@@ -53,7 +37,6 @@ function Header() {
           <img src="/logo.png" alt="Logo" width="50" height="50" className="rounded-circle logo-glow" />
           <div className="brand-text">
             <span className="brand-title fw-bold">AL BAYAN KUNNATH</span>
-            <span className="d-block x-small opacity-75">DARS ACADEMY</span>
           </div>
         </NavLink>
         
@@ -62,7 +45,7 @@ function Header() {
         </button>
         
         <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav mx-auto nav-links gap-lg-3">
+          <ul className="navbar-nav ms-auto nav-links gap-lg-3 me-lg-4">
             <li className="nav-item">
               <NavLink className="nav-link" to="/" end onClick={closeMenu}>HOME</NavLink>
             </li>
@@ -81,9 +64,6 @@ function Header() {
           </ul>
           
           <div className="d-flex align-items-center gap-3 mt-3 mt-xl-0">
-            <button className="btn btn-outline-light border-0 rounded-circle" onClick={handleShare} title="Share Website">
-               <i className="bi bi-share-fill fs-5"></i>
-            </button>
             <div className="dropdown">
               <button className="btn btn-teal-solid dropdown-toggle fw-bold rounded-pill px-4" type="button" data-bs-toggle="dropdown">
                 <i className="bi bi-shield-lock-fill fs-5 me-2"></i>
