@@ -5,13 +5,25 @@ import "./StudentLogin.css";
 
 function StudentLogin() {
   const [token, setToken] = useState(localStorage.getItem('studentToken'));
-  const [phone, setPhone] = useState("");
+  const [loginMode, setLoginMode] = useState("login"); // 'login' or 'activate'
+  
+  // Login States
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  
+  // Activation States
+  const [activationStep, setActivationStep] = useState(1);
+  const [actName, setActName] = useState("");
+  const [actPhone, setActPhone] = useState("");
+  const [actUser, setActUser] = useState("");
+  const [actPass, setActPass] = useState("");
+  const [actPhoto, setActPhoto] = useState("");
+  const [studentToActivate, setStudentToActivate] = useState(null);
+
+  // Dashboard Data
   const [studentInfo, setStudentInfo] = useState(null);
   const [results, setResults] = useState([]);
-  
-  // Profile & Tab States
-  const [activeTab, setActiveTab] = useState("results"); // 'results', 'profile', or 'notices'
+  const [activeTab, setActiveTab] = useState("results");
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [tempBio, setTempBio] = useState("");
@@ -24,8 +36,10 @@ function StudentLogin() {
   }, [token]);
 
   const fetchNotifications = async () => {
-    const res = await fetch("/api/notifications");
-    if(res.ok) setNotifications(await res.json());
+    try {
+      const res = await fetch("/api/notifications");
+      if(res.ok) setNotifications(await res.json());
+    } catch(err) { console.error("Notif fetch failed"); }
   };
 
   const fetchMyResults = async () => {
@@ -47,18 +61,81 @@ function StudentLogin() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: phone, password })
+        body: JSON.stringify({ username, password })
       });
       const data = await res.json();
       if (res.ok && data.role === 'student') {
         localStorage.setItem("studentToken", data.token);
         setToken(data.token);
       } else {
-        alert(data.error || "Login Failed. Try switching the password to your DOB.");
+        alert(data.error || "Login Failed");
       }
     } catch(err) {
       alert("Network Error");
     }
+  };
+
+  const checkStudentActivation = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch("/api/check-activation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentName: actName, phone: actPhone })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.hasCustomCredentials) {
+          alert("Your account is already active. Please use the login form.");
+          setLoginMode("login");
+        } else {
+          setStudentToActivate(data.id);
+          setActivationStep(2);
+        }
+      } else {
+        alert(data.error || "Candidate not found");
+      }
+    } catch(err) { alert("Check failed"); }
+  };
+
+  const finalizeActivation = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch("/api/activate-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+           studentId: studentToActivate, 
+           username: actUser, 
+           password: actPass,
+           profilePhoto: actPhoto
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert("Activation Successful! Now login with your new credentials.");
+        setLoginMode("login");
+        setActivationStep(1);
+        setUsername(actUser);
+      } else {
+        alert(data.error || "Activation failed");
+      }
+    } catch(err) { alert("Error during activation"); }
+  };
+
+  const handleActivationPhoto = async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    setUploadingDoc(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if(res.ok) setActPhoto(data.url);
+      else alert("Photo upload failed");
+    } catch(err) { alert("Upload error"); }
+    finally { setUploadingDoc(false); }
   };
 
   const logout = () => {
@@ -69,7 +146,6 @@ function StudentLogin() {
   const handleDocumentUpload = async (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
-    
     setUploadingDoc(true);
     const formData = new FormData();
     formData.append("file", file);
@@ -79,7 +155,6 @@ function StudentLogin() {
       const uploadData = await uploadRes.json();
       if (!uploadRes.ok) throw new Error(uploadData.error);
 
-      // Save to profile
       const updatePayload = {};
       if (type === 'aadhar') updatePayload.aadharFile = uploadData.url;
       if (type === 'sslc') updatePayload.sslcFile = uploadData.url;
@@ -87,6 +162,10 @@ function StudentLogin() {
       if (type === 'birthCert') updatePayload.birthCertFile = uploadData.url;
       if (type === 'tc') updatePayload.tcFile = uploadData.url;
       if (type === 'marklist') updatePayload.marklistFile = uploadData.url;
+      if (type === 'extra') {
+        const currentCerts = studentInfo?.extraCertificates || [];
+        updatePayload.extraCertificates = [...currentCerts, uploadData.url];
+      }
 
       const updateRes = await fetch("/api/my-profile", {
         method: "POST",
@@ -95,11 +174,11 @@ function StudentLogin() {
       });
       
       if(updateRes.ok) {
-        alert("Profile document uploaded successfully!");
-        fetchMyResults(); // Refresh student data
+        alert("Document uploaded successfully!");
+        fetchMyResults();
       }
     } catch(err) {
-      alert("Failed to upload document. Please try again.");
+      alert("Failed to upload. Use smaller files or check connection.");
     } finally {
       setUploadingDoc(false);
     }
@@ -122,60 +201,119 @@ function StudentLogin() {
   const downloadMarklist = (result) => {
     const doc = new jsPDF();
     doc.setFontSize(22);
-    doc.setTextColor(0, 109, 119); // Teal
+    doc.setTextColor(0, 109, 119);
     doc.text("BAYANUL ULOOM DARS KUNNATH", 105, 20, null, null, "center");
     
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
-    doc.text("Student Marklist", 105, 30, null, null, "center");
+    doc.text(`${result.examType} Exam Marksheet - ${result.year}`, 105, 30, null, null, "center");
 
     doc.setFontSize(12);
-    doc.text(`Student Name: ${studentInfo?.studentName || 'N/A'}`, 20, 50);
-    doc.text(`Exam Name: ${result.examName}`, 20, 60);
-    doc.text(`Published On: ${new Date(result.publishedDate).toLocaleDateString()}`, 20, 70);
+    doc.text(`Student: ${studentInfo?.studentName}`, 20, 50);
+    doc.text(`Date Published: ${new Date(result.publishedDate).toLocaleDateString()}`, 20, 60);
+
+    const body = result.subjects.map(s => [s.subject, s.mark]);
+    body.push([{ content: 'Total Marks', styles: { fontStyle: 'bold' } }, { content: result.totalMarks, styles: { fontStyle: 'bold' } }]);
+    body.push([{ content: 'Final Grade', styles: { fontStyle: 'bold' } }, { content: result.grade, styles: { fontStyle: 'bold' } }]);
 
     doc.autoTable({
-      startY: 80,
-      head: [['Particulars', 'Score']],
-      body: [
-        ['Total Marks', result.totalMarks],
-        ['Final Grade', result.grade]
-      ],
+      startY: 70,
+      head: [['Subject', 'Marks Output']],
+      body: body,
       headStyles: { fillColor: [0, 109, 119] },
       theme: 'grid'
     });
 
     doc.setFontSize(10);
-    doc.text("Generated by AL BAYAN KUNNATH digital ecosystem", 105, 280, null, null, "center");
-    doc.save(`${studentInfo?.studentName}_${result.examName}_Marklist.pdf`);
+    doc.text("Officially generated by Al Bayan Digital System", 105, 280, null, null, "center");
+    doc.save(`${studentInfo?.studentName}_Results.pdf`);
   };
 
   if (!token) {
     return (
-      <section className="student-login-page py-5 d-flex align-items-center justify-content-center" style={{ minHeight: '80vh' }}>
-        <div className="container px-4">
-          <div className="row justify-content-center">
-            <div className="col-md-6 col-lg-5">
-              <div className="card login-card border-0 shadow-lg position-relative overflow-hidden glass-card p-4 rounded-4">
-                <div className="text-center mb-5">
-                  <div className="login-logo-wrapper mb-4">
-                    <img src="/logo.png" alt="Dars Logo" width="80" height="80" className="rounded-circle shadow" />
-                  </div>
-                  <h2 className="login-title fw-bold mb-2" style={{color: '#006d77'}}>STUDENT LOGIN</h2>
-                  <p className="text-muted small">Access your dashboard & marklists</p>
+      <section className="container py-5">
+        <div className="row justify-content-center">
+          <div className="col-md-6 col-lg-5">
+            <div className="card border-0 shadow-lg rounded-4 overflow-hidden">
+              <div className="bg-teal-primary p-4 text-center text-white">
+                <img src="/logo.png" alt="Logo" width="70" className="mb-3 rounded-circle shadow" />
+                <h3 className="fw-bold mb-0">STUDENT PORTAL</h3>
+              </div>
+              
+              <div className="p-4">
+                <div className="nav nav-pills nav-fill mb-4 bg-light rounded-pill p-1">
+                  <button className={`nav-link rounded-pill fw-bold ${loginMode === 'login' ? 'active bg-teal-primary' : 'text-dark'}`} onClick={() => setLoginMode('login')}>LOGIN</button>
+                  <button className={`nav-link rounded-pill fw-bold ${loginMode === 'activate' ? 'active bg-teal-primary' : 'text-dark'}`} onClick={() => setLoginMode('activate')}>FIRST TIME?</button>
                 </div>
-                
-                <form onSubmit={handleLogin} className="login-form">
-                  <div className="mb-4 text-start">
-                    <label className="form-label text-muted small px-1 fw-bold">Phone / Username</label>
-                    <input type="text" className="form-control p-3 bg-light" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Registerd mobile number" required />
+
+                {loginMode === 'login' ? (
+                  <form onSubmit={handleLogin}>
+                    <div className="mb-3">
+                      <label className="small fw-bold text-muted">USERNAME</label>
+                      <input type="text" className="form-control form-control-lg bg-light border-0 shadow-none rounded-3" value={username} onChange={e=>setUsername(e.target.value)} required />
+                    </div>
+                    <div className="mb-4">
+                      <label className="small fw-bold text-muted">PASSWORD</label>
+                      <input type="password" className="form-control form-control-lg bg-light border-0 shadow-none rounded-3" value={password} onChange={e=>setPassword(e.target.value)} required />
+                    </div>
+                    <button className="btn btn-teal-primary w-100 py-3 fw-bold rounded-pill shadow-sm transition-hover">
+                       SIGN IN TO PORTAL <i className="bi bi-arrow-right-short fs-4"></i>
+                    </button>
+                  </form>
+                ) : (
+                  <div>
+                    {activationStep === 1 ? (
+                      <form onSubmit={checkStudentActivation}>
+                        <div className="alert alert-info small py-3 rounded-3 mb-4">
+                           <i className="bi bi-info-circle-fill me-2"></i>
+                           Enter your details exactly as given in your admission form to activate your digital portal.
+                        </div>
+                        <div className="mb-3">
+                          <label className="small fw-bold text-muted">NAME OF CANDIDATE</label>
+                          <input type="text" className="form-control bg-light border-0" value={actName} onChange={e=>setActName(e.target.value)} required placeholder="Full Name" />
+                        </div>
+                        <div className="mb-4">
+                          <label className="small fw-bold text-muted">REGISTERED PHONE</label>
+                          <input type="tel" className="form-control bg-light border-0" value={actPhone} onChange={e=>setActPhone(e.target.value)} required placeholder="+91 XXXX XXXX" />
+                        </div>
+                        <button className="btn btn-teal-primary w-100 py-3 fw-bold rounded-pill">VERIFY CANDIDATE ➡️</button>
+                      </form>
+                    ) : (
+                      <form onSubmit={finalizeActivation}>
+                        <div className="text-center mb-4">
+                           <div className="p-3 bg-warning bg-opacity-10 border border-warning rounded-4">
+                              <h6 className="fw-bold text-warning mb-1">⚠️ IMPORTANT WARNING</h6>
+                              <p className="small mb-0">Please set your unique username and password. This will be used for all future logins to your candidate portal.</p>
+                           </div>
+                        </div>
+
+                        <div className="text-center mb-4">
+                           <label className="small fw-bold text-muted d-block mb-2">UPLOAD PROFILE PHOTO</label>
+                           <div className="position-relative d-inline-block">
+                              <img src={actPhoto || "/logo.png"} className="rounded-circle border shadow-sm" width="100" height="100" style={{objectFit:'cover'}} />
+                              <label className="btn btn-sm btn-teal-primary position-absolute bottom-0 end-0 rounded-circle p-1">
+                                 <i className="bi bi-camera"></i>
+                                 <input type="file" className="d-none" accept="image/*" onChange={handleActivationPhoto} />
+                              </label>
+                           </div>
+                        </div>
+
+                        <div className="mb-3">
+                          <label className="small fw-bold text-muted">CREATE USERNAME</label>
+                          <input type="text" className="form-control bg-light border-0" value={actUser} onChange={e=>setActUser(e.target.value)} required placeholder="e.g. m_ameen_01" />
+                        </div>
+                        <div className="mb-4">
+                          <label className="small fw-bold text-muted">SECURE PASSWORD</label>
+                          <input type="password" className="form-control bg-light border-0" value={actPass} onChange={e=>setActPass(e.target.value)} required minLength="6" />
+                        </div>
+                        <button className="btn btn-success w-100 py-3 fw-bold rounded-pill shadow-sm" disabled={uploadingDoc}>
+                           {uploadingDoc ? 'Uploading...' : 'ACTIVATE PORTAL ACCOUNT'}
+                        </button>
+                        <button type="button" className="btn btn-link w-100 mt-2 text-muted small" onClick={() => setActivationStep(1)}>Go back</button>
+                      </form>
+                    )}
                   </div>
-                  <div className="mb-4 text-start">
-                    <label className="form-label text-muted small px-1 fw-bold">Password (DOB)</label>
-                    <input type="password" className="form-control p-3 bg-light" value={password} onChange={e=>setPassword(e.target.value)} placeholder="YYYY-MM-DD or as entered" required />
-                  </div>
-                  <button type="submit" className="btn btn-teal-primary w-100 py-3 fw-bold rounded shadow-sm mt-3">PROCEED TO DASHBOARD</button>
-                </form>
+                )}
               </div>
             </div>
           </div>
@@ -185,190 +323,160 @@ function StudentLogin() {
   }
 
   return (
-    <section className="student-dashboard container py-5" style={{fontFamily: 'Inter, sans-serif'}}>
-      <div className="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom border-secondary">
-        <div>
-          <h2 className="fw-bold mb-1" style={{color: '#006d77'}}>
-            Welcome, {studentInfo?.studentName}
-            <span className={`ms-3 badge fs-6 ${studentInfo?.status === 'approved' ? 'bg-success' : studentInfo?.status === 'rejected' ? 'bg-danger' : 'bg-warning text-dark'}`}>
-              {studentInfo?.status?.toUpperCase() || 'PENDING APPROVAL'}
-            </span>
-          </h2>
-          <p className="text-muted mb-0">Student ID: {studentInfo?._id?.slice(-6).toUpperCase()}</p>
+    <section className="container-fluid py-4 min-vh-100 bg-light">
+      <div className="container">
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="card border-0 shadow-sm rounded-4 p-4 d-flex flex-row justify-content-between align-items-center bg-white">
+              <div className="d-flex align-items-center gap-3">
+                 <img src={studentInfo?.profilePhoto || "/logo.png"} alt="DP" className="rounded-circle shadow-sm" width="60" height="60" style={{objectFit: 'cover'}} />
+                 <div>
+                    <h4 className="fw-bold mb-0 text-teal">{studentInfo?.studentName}</h4>
+                    <span className="badge bg-light text-success border">✓ OFFICIAL CANDIDATE</span>
+                 </div>
+              </div>
+              <button onClick={logout} className="btn btn-outline-danger btn-sm rounded-pill px-3">SIGN OUT</button>
+            </div>
+          </div>
         </div>
-        <button onClick={logout} className="btn btn-outline-danger fw-bold rounded-pill px-4">Sign Out</button>
-      </div>
 
-      <div className="d-flex border-bottom mb-4">
-        <button className={`btn rounded-0 px-4 py-3 fw-bold ${activeTab === 'results' ? 'btn-teal-primary shadow-sm' : 'text-muted'}`} onClick={() => setActiveTab('results')}>🏆 My Results</button>
-        <button className={`btn rounded-0 px-4 py-3 fw-bold ${activeTab === 'profile' ? 'active bg-teal-primary text-white shadow-sm' : 'text-muted'}`} onClick={() => setActiveTab('profile')}>👤 My Profile</button>
-        <button className={`btn rounded-0 px-4 py-3 fw-bold ${activeTab === 'notices' ? 'btn-teal-primary shadow-sm' : 'text-muted'}`} onClick={() => setActiveTab('notices')}>📢 Announcements ({notifications.length})</button>
-      </div>
-
-      {activeTab === 'profile' && (
         <div className="row g-4">
-          <div className="col-md-4">
-            <div className="card shadow-sm border-0 rounded-4 p-4 text-center mb-4">
-              <div className="mb-4 position-relative d-inline-block">
-                <img 
-                  src={studentInfo?.profilePhoto || "/logo.png"} 
-                  alt="Profile" 
-                  className="rounded-circle shadow" 
-                  style={{width: '150px', height: '150px', objectFit: 'cover'}} 
-                />
-                <label className="btn btn-sm btn-teal-primary position-absolute bottom-0 end-0 rounded-circle" disabled={uploadingDoc} style={{width: '40px', height: '40px', lineHeight: '25px'}}>
-                  {uploadingDoc ? '...' : '✏️'}
-                  <input type="file" accept="image/*" className="d-none" onChange={(e) => handleDocumentUpload(e, 'profile')} />
-                </label>
-              </div>
-              <h4 className="fw-bold">{studentInfo?.studentName}</h4>
-              <p className="text-muted mb-0">DOB: {studentInfo?.dob}</p>
-              <p className="text-muted">Phone: {studentInfo?.phone}</p>
-            </div>
-
-            <div className="card shadow-sm border-0 rounded-4 p-4">
-              <h5 className="fw-bold border-bottom pb-2 mb-3">Quick Actions</h5>
-              <div className="mb-3">
-                <label className="fw-bold small d-block mb-1">Update About Me</label>
-                <textarea className="form-control bg-light mb-2 small" rows="3" value={tempBio} onChange={e=>setTempBio(e.target.value)} />
-                <button className="btn btn-sm btn-teal-primary w-100" onClick={() => handleProfileUpdate({ bio: tempBio })}>Save Bio</button>
-              </div>
+          <div className="col-lg-3">
+            <div className="nav flex-column nav-pills bg-white shadow-sm p-3 rounded-4 gap-2">
+              <button className={`nav-link text-start py-3 fw-bold ${activeTab === 'results' ? 'active bg-teal-primary' : 'text-dark'}`} onClick={() => setActiveTab('results')}>🏆 MY RESULTS</button>
+              <button className={`nav-link text-start py-3 fw-bold ${activeTab === 'profile' ? 'active bg-teal-primary' : 'text-dark'}`} onClick={() => setActiveTab('profile')}>👤 MY PROFILE</button>
+              <button className={`nav-link text-start py-3 fw-bold ${activeTab === 'notices' ? 'active bg-teal-primary' : 'text-dark'}`} onClick={() => setActiveTab('notices')}>📢 NOTICES ({notifications.length})</button>
             </div>
           </div>
-          
-          <div className="col-md-8">
-            <div className="card shadow-sm border-0 rounded-4 p-4 mb-4">
-              <h4 className="fw-bold border-bottom pb-3 mb-4 text-teal">Detailed Information</h4>
-              <div className="row g-3">
-                {[
-                  { label: "Father's Name", value: studentInfo?.fatherName, key: "fatherName" },
-                  { label: "Mother's Name", value: studentInfo?.motherName, key: "motherName" },
-                  { label: "Guardian Contact", value: studentInfo?.guardianPhone, key: "guardianPhone" },
-                  { label: "Email Address", value: studentInfo?.email, key: "email" },
-                  { label: "Blood Group", value: studentInfo?.bloodGroup, key: "bloodGroup" },
-                  { label: "Native Place", value: studentInfo?.place, key: "place" }
-                ].map(item => (
-                  <div className="col-md-6" key={item.key}>
-                    <label className="small fw-bold text-muted">{item.label}</label>
-                    <div className="d-flex gap-2">
-                       <input 
-                         className="form-control form-control-sm bg-light" 
-                         defaultValue={item.value || ""} 
-                         onBlur={(e) => {
-                           if(e.target.value !== item.value) handleProfileUpdate({ [item.key]: e.target.value });
-                         }}
-                       />
-                    </div>
-                  </div>
-                ))}
-                <div className="col-12 mt-3">
-                  <label className="small fw-bold text-muted">Residential Address</label>
-                  <textarea 
-                    className="form-control bg-light" 
-                    rows="2" 
-                    defaultValue={studentInfo?.address || ""}
-                    onBlur={(e) => {
-                      if(e.target.value !== studentInfo?.address) handleProfileUpdate({ address: e.target.value });
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
 
-            <div className="card shadow-sm border-0 rounded-4 p-4">
-              <h4 className="fw-bold border-bottom pb-3 mb-4 text-teal">Mandatory Documents</h4>
-              <div className="row g-4">
-                {[
-                  { label: "Aadhar Card", key: "aadhar", file: studentInfo?.aadharFile },
-                  { label: "SSLC / Education Log", key: "sslc", file: studentInfo?.sslcFile },
-                  { label: "Birth Certificate", key: "birthCert", file: studentInfo?.birthCertFile },
-                  { label: "Transfer Certificate (TC)", key: "tc", file: studentInfo?.tcFile },
-                  { label: "Last Exam Marklist", key: "marklist", file: studentInfo?.marklistFile }
-                ].map(doc => (
-                  <div className="col-md-6" key={doc.key}>
-                    <div className="border rounded-3 p-3 bg-light h-100">
-                      <label className="fw-bold d-block mb-2 small">{doc.label}</label>
-                      {doc.file ? (
-                        <div className="d-flex align-items-center gap-2">
-                          <span className="badge bg-success small">✔️ OK</span>
-                          <a href={doc.file} target="_blank" rel="noreferrer" className="btn btn-xs btn-link text-teal p-0">View</a>
-                          <label className="btn btn-link text-secondary p-0 small ms-auto mb-0">
-                            Re-upload <input type="file" className="d-none" onChange={e => handleDocumentUpload(e, doc.key)} />
+          <div className="col-lg-9">
+            <div className="card border-0 shadow-sm rounded-4 p-4 bg-white min-vh-50">
+               {activeTab === 'results' && (
+                 <div>
+                   <h4 className="fw-bold mb-4">Official Marksheets</h4>
+                   {results.length === 0 ? <p className="text-center py-5 text-muted">No results published yet.</p> : (
+                     <div className="row g-3">
+                        {results.map(r => (
+                          <div className="col-md-6" key={r._id}>
+                             <div className="border rounded-4 p-4 text-center bg-light">
+                                <span className="badge bg-teal-primary mb-2">{r.examType} - {r.year}</span>
+                                <h3 className="display-5 fw-bold mb-0">{r.totalMarks}</h3>
+                                <p className="text-muted small">Total Score</p>
+                                <div className="badge bg-success fs-6 px-4 py-2 rounded-pill mb-4">GRADE: {r.grade}</div>
+                                <button className="btn btn-outline-teal w-100 fw-bold py-2 rounded-pill" onClick={() => downloadMarklist(r)}>📥 DOWNLOAD CERTIFICATE</button>
+                             </div>
+                          </div>
+                        ))}
+                     </div>
+                   )}
+                 </div>
+               )}
+
+               {activeTab === 'profile' && (
+                 <div className="row g-4">
+                    <div className="col-md-4 text-center">
+                       <div className="position-relative d-inline-block mb-3">
+                          <img src={studentInfo?.profilePhoto || "/logo.png"} alt="Profile" className="rounded-circle shadow" width="160" height="160" style={{objectFit: 'cover'}} />
+                          <label className="btn btn-teal-primary position-absolute bottom-0 end-0 rounded-circle p-2 shadow" style={{width: 40, height: 40}}>
+                             {uploadingDoc ? '...' : '✏️'}
+                             <input type="file" className="d-none" accept="image/*" onChange={e => handleDocumentUpload(e, 'profile')} disabled={uploadingDoc} />
                           </label>
-                        </div>
-                      ) : (
-                        <div>
-                          <input type="file" className="form-control form-control-sm" onChange={e => handleDocumentUpload(e, doc.key)} disabled={uploadingDoc} />
-                        </div>
-                      )}
+                       </div>
+                       <h5 className="fw-bold">{studentInfo?.studentName}</h5>
+                       <p className="text-muted small">{studentInfo?.phone}</p>
+                       <hr/>
+                       <div className="text-start">
+                          <label className="small fw-bold text-muted">ABOUT ME</label>
+                          <textarea className="form-control bg-light small mb-2" rows="3" value={tempBio} onChange={e=>setTempBio(e.target.value)} />
+                          <button className="btn btn-teal-primary btn-sm w-100 rounded-pill" onClick={() => handleProfileUpdate({ bio: tempBio })}>SAVE BIO</button>
+                       </div>
                     </div>
+                    <div className="col-md-9">
+                        {studentInfo?.adminNote && (
+                           <div className="alert alert-warning border-0 shadow-sm rounded-4 mb-4 p-3 d-flex gap-3">
+                              <i className="bi bi-info-circle-fill fs-3 text-warning"></i>
+                              <div>
+                                 <strong className="d-block mb-1">OFFICE INSTRUCTION:</strong>
+                                 <p className="small mb-0 opacity-75">{studentInfo.adminNote}</p>
+                              </div>
+                           </div>
+                        )}
+
+                        <h5 className="fw-bold text-teal border-bottom pb-2 mb-3">MANDATORY DOCUMENTS</h5>
+                        <div className="row g-2 mb-4">
+                           {[
+                             { label: "AADHAR CARD", key: "aadhar", file: studentInfo?.aadharFile },
+                             { label: "SSLC BOOK", key: "sslc", file: studentInfo?.sslcFile },
+                             { label: "BIRTH CERT", key: "birthCert", file: studentInfo?.birthCertFile },
+                             { label: "T.C FILE", key: "tc", file: studentInfo?.tcFile },
+                             { label: "PREV MARKLIST", key: "marklist", file: studentInfo?.marklistFile }
+                           ].map(doc => (
+                             <div className="col-md-6 col-lg-4" key={doc.key}>
+                                <div className="p-3 border rounded-4 bg-light h-100 shadow-sm transition-hover">
+                                   <label className="x-small fw-bold text-muted d-block opacity-50">{doc.label}</label>
+                                   {doc.file ? (
+                                     <div className="d-flex align-items-center justify-content-between mt-2">
+                                        <span className="text-success fw-bold small"><i className="bi bi-check-circle-fill me-1"></i>LOADED</span>
+                                        <div className="d-flex gap-2">
+                                           <a href={doc.file} target="_blank" rel="noreferrer" className="btn btn-sm btn-teal-primary px-3 rounded-pill py-0 small">VIEW</a>
+                                           <label className="btn btn-sm btn-outline-secondary px-2 rounded-pill py-0 small">
+                                              <i className="bi bi-pencil"></i><input type="file" className="d-none" onChange={e => handleDocumentUpload(e, doc.key)} />
+                                           </label>
+                                        </div>
+                                     </div>
+                                   ) : (
+                                     <div className="mt-2">
+                                        <input type="file" id={`file-${doc.key}`} className="d-none" onChange={e => handleDocumentUpload(e, doc.key)} disabled={uploadingDoc} />
+                                        <label htmlFor={`file-${doc.key}`} className="btn btn-sm btn-outline-teal w-100 rounded-pill py-1">UPLOAD NOW</label>
+                                     </div>
+                                   )}
+                                </div>
+                             </div>
+                           ))}
+                        </div>
+
+                        <h5 className="fw-bold text-secondary border-bottom pb-2 mb-3">ACHIEVEMENTS & EXTRA CERTIFICATES</h5>
+                        <div className="row g-2">
+                           {(studentInfo?.extraCertificates || []).map((url, idx) => (
+                             <div className="col-md-4" key={idx}>
+                                <div className="p-2 border rounded-4 bg-white shadow-sm d-flex align-items-center justify-content-between">
+                                   <span className="small truncate me-2">Cert {idx+1}</span>
+                                   <a href={url} target="_blank" className="btn btn-xs btn-link p-0 text-teal">OPEN</a>
+                                </div>
+                             </div>
+                           ))}
+                           <div className="col-md-4">
+                              <label className="btn btn-sm btn-outline-secondary w-100 border-dashed rounded-4 py-3 d-flex flex-column align-items-center justify-content-center">
+                                 <i className="bi bi-plus-circle fs-4 mb-1"></i>
+                                 <span className="x-small fw-bold">ADD NEW DOC</span>
+                                 <input type="file" className="d-none" onChange={e => handleDocumentUpload(e, 'extra')} disabled={uploadingDoc} />
+                              </label>
+                           </div>
+                        </div>
+                     </div>
                   </div>
-                ))}
-              </div>
+               )}
+
+               {activeTab === 'notices' && (
+                 <div className="row justify-content-center">
+                    <div className="col-lg-10">
+                       <h4 className="fw-bold mb-4 text-center">CAMPUS ANNOUNCEMENTS</h4>
+                       {notifications.map(n => (
+                         <div key={n._id} className={`alert border-0 shadow-sm rounded-4 p-4 mb-3 ${n.type === 'urgent' ? 'alert-danger' : 'alert-light'}`}>
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                               <h5 className="fw-bold mb-0 text-teal">{n.title}</h5>
+                               <span className="small text-muted">{new Date(n.createdAt).toLocaleDateString()}</span>
+                            </div>
+                            <p className="mb-0 text-secondary lh-base">{n.message}</p>
+                         </div>
+                       ))}
+                    </div>
+                 </div>
+               )}
             </div>
           </div>
         </div>
-      )}
-
-      {activeTab === 'notices' && (
-        <div className="row justify-content-center">
-          <div className="col-lg-8">
-            <h3 className="mb-4 fw-bold">Campus Announcements</h3>
-            <div className="list-group shadow-sm border-0">
-              {notifications.map(n => (
-                <div key={n._id} className={`list-group-item border-0 shadow-sm mb-3 rounded-4 p-4 ${n.type === 'urgent' ? 'bg-light-danger border-start border-danger border-5' : 'bg-white border-start border-teal border-5'}`}>
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <h5 className="fw-bold mb-0 text-teal">{n.title}</h5>
-                    <span className="badge bg-light text-dark border small">{new Date(n.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <p className="mb-0 text-secondary">{n.message}</p>
-                </div>
-              ))}
-              {notifications.length === 0 && (
-                <div className="text-center py-5 text-muted">
-                  <span className="display-4 d-block mb-3">📭</span>
-                  <p>No new announcements at this time.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'results' && (
-        <>
-          <h3 className="mb-4 fw-bold">Official Results & Marklists</h3>
-          {results.length === 0 ? (
-            <div className="alert alert-info border-0 shadow-sm p-4 rounded-4 text-center">
-              <h4 className="fw-bold mb-2">No Results Yet!</h4>
-              <p className="mb-0">Your exam results have not been published by the administration yet. Check back later.</p>
-            </div>
-          ) : (
-            <div className="row g-4">
-              {results.map(res => (
-                <div key={res._id} className="col-md-6 col-lg-4">
-                  <div className="card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
-                    <div className="bg-teal-primary text-white p-3 text-center text-capitalize">
-                      <h5 className="mb-0 fw-bold">{res.examName}</h5>
-                    </div>
-                    <div className="card-body p-4 text-center bg-light">
-                      <p className="text-muted small mb-2">Total Score</p>
-                      <h2 className="display-4 fw-bold mb-3">{res.totalMarks}</h2>
-                      <span className="badge bg-success fs-5 px-4 py-2 rounded-pill shadow-sm">Grade: {res.grade}</span>
-                      <div className="mt-4 pt-3 border-top border-light">
-                        <p className="small text-muted mb-3">Published: {new Date(res.publishedDate).toLocaleDateString()}</p>
-                        <button onClick={() => downloadMarklist(res)} className="btn btn-outline-teal w-100 fw-bold py-2">
-                          ⬇ Download Marklist
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+      </div>
     </section>
   );
 }

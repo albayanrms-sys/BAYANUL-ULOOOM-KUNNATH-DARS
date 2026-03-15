@@ -8,7 +8,7 @@ import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import apiRoutes from './routes.js';
-import { User, Setting } from './models.js';
+import { User } from './models.js';
 import bcrypt from 'bcryptjs';
 
 dotenv.config();
@@ -22,46 +22,29 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Admin setup function
-const initializeAdmin = async () => {
-  try {
-    const adminExists = await User.findOne({ username: 'ramees baqavi' });
-    if (!adminExists) {
-      const hashedPassword = await bcrypt.hash('ramees786', 10);
-      await User.create({
-        username: 'ramees baqavi',
-        password: hashedPassword,
-        role: 'admin'
-      });
-      console.log('✅ Admin initialized');
-    } else {
-      // Also update if it's the old typo version
-      const isOldPassword = await bcrypt.compare('remees786', adminExists.password);
-      if (isOldPassword) {
-        adminExists.password = await bcrypt.hash('ramees786', 10);
-        await adminExists.save();
-        console.log('✅ Admin password updated to correct spelling');
-      }
-    }
-  } catch(err) {
-    console.error('Admin init error:', err);
-  }
-};
-
 // MongoDB connection
-let lastDbError = null;
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/al-bayan-kunnath')
+mongoose.connect(process.env.MONGODB_URI, {
+  serverSelectionTimeoutMS: 5000
+})
   .then(() => {
     console.log('✅ Connected to MongoDB');
-    lastDbError = null;
     initializeAdmin();
   })
   .catch((err) => {
     console.error('❌ MongoDB connection error:', err);
-    lastDbError = err.message;
   });
 
-// Cloudinary configuration
+// Admin setup
+const initializeAdmin = async () => {
+  const adminExists = await User.findOne({ username: 'ramees baqavi' });
+  if (!adminExists) {
+    const hashedPassword = await bcrypt.hash('ramees786', 10);
+    await User.create({ username: 'ramees baqavi', password: hashedPassword, role: 'admin' });
+    console.log('🔑 Default admin created');
+  }
+};
+
+// Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -70,59 +53,34 @@ cloudinary.config({
 
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: async (req, file) => {
-    let resource_type = 'auto';
-    if (file.mimetype.includes('video')) resource_type = 'video';
-    return {
-      folder: 'al-bayan-assets',
-      allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'mp4', 'mkv'],
-      resource_type: resource_type
-    };
+  params: {
+    folder: 'al-bayan-assets',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+    resource_type: 'auto'
   }
 });
-const upload = multer({ storage });
+export const upload = multer({ storage });
 
+// API Routes
 app.use('/api', apiRoutes);
 
-// Example Image Upload Route
+// Dedicated Upload Route (to ensure it works correctly)
 app.post('/api/upload', upload.single('file'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
-  }
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   res.json({ url: req.file.path, message: 'File uploaded successfully' });
 });
 
-// Serve static files from Vite's production build (dist folder)
-app.use(express.static(path.resolve(__dirname, '..', 'dist')));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', db: mongoose.connection.readyState }));
 
-// Simple health‑check endpoint
-app.get('/api/health', async (req, res) => {
-  // Wait up to 3 seconds for connection if it's currently connecting
-  let attempts = 0;
-  while (mongoose.connection.readyState === 2 && attempts < 15) {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    attempts++;
-  }
-  
-  res.json({ 
-    status: 'ok', 
-    message: 'Backend is running',
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    db_state: mongoose.connection.readyState,
-    db_uri_status: process.env.MONGODB_URI ? 'present' : 'missing',
-    db_error: lastDbError
-  });
-});
+// Static Files & SPA
+const distPath = path.resolve(__dirname, '..', 'dist');
+app.use(express.static(distPath));
 
-// For SPA routing – return index.html for any unknown route
 app.get('*', (req, res) => {
-  res.sendFile(path.resolve(__dirname, '..', 'dist', 'index.html'));
+  if (req.originalUrl.startsWith('/api')) {
+    return res.status(404).json({ error: 'API route not found' });
+  }
+  res.sendFile(path.resolve(distPath, 'index.html'));
 });
 
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-  app.listen(PORT, () => {
-    console.log(`🚀 Server listening on http://localhost:${PORT}`);
-  });
-}
-
-export default app;
+app.listen(PORT, () => console.log(`🚀 Server listening on http://localhost:${PORT}`));

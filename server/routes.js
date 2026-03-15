@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { User, Setting, Student, Result, GalleryItem, Notification } from './models.js';
+import { User, Setting, Student, Result, GalleryItem, Poster, Notification } from './models.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'bayanululoomsecret';
@@ -39,13 +39,67 @@ router.post('/login', async (req, res) => {
   res.json({ token, role: user.role, username: user.username, studentRef: user.studentRef });
 });
 
+// Check if student can activate account
+router.post('/check-activation', async (req, res) => {
+  const { studentName, phone } = req.body;
+  const student = await Student.findOne({ studentName, phone });
+  if (!student) return res.status(404).json({ error: 'Candidate not found. Please check name and phone spelling exactly as given in admission.' });
+  
+  res.json({ 
+    hasCustomCredentials: student.hasCustomCredentials, 
+    id: student._id,
+    message: student.hasCustomCredentials ? 'Account already active. Please login.' : 'Candidate found. Please set your credentials.'
+  });
+});
+
+// Activate Account
+router.post('/activate-account', async (req, res) => {
+  const { studentId, username, password, profilePhoto } = req.body;
+  try {
+    const student = await Student.findById(studentId);
+    if (!student) return res.status(404).json({ error: 'Student not found' });
+    
+    const existingUser = await User.findOne({ username });
+    if (existingUser) return res.status(400).json({ error: 'Username already taken' });
+    
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Update or create user
+    await User.findOneAndUpdate(
+      { studentRef: studentId },
+      { username, password: hashedPassword, role: 'student', studentRef: studentId },
+      { upsert: true }
+    );
+    
+    student.hasCustomCredentials = true;
+    if (profilePhoto) student.profilePhoto = profilePhoto;
+    await student.save();
+    
+    res.json({ message: 'Account activated successfully! You can now login.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Activation failed' });
+  }
+});
+
 // Update Student Profile (Student)
 router.post('/my-profile', auth, async (req, res) => {
-  if (req.user.role !== 'student') return res.status(403).json({ error: 'Students only' });
+  const { bio, aadharFile, sslcFile, profilePhoto, birthCertFile, tcFile, marklistFile, extraCertificates } = req.body;
   try {
-    const student = await Student.findByIdAndUpdate(req.user.studentRef, req.body, { new: true });
+    const student = await Student.findOne({ _id: req.user.studentRef });
+    if (!student) return res.status(404).json({ error: 'Student profile not found' });
+    
+    if (bio !== undefined) student.bio = bio;
+    if (aadharFile) student.aadharFile = aadharFile;
+    if (sslcFile) student.sslcFile = sslcFile;
+    if (profilePhoto) student.profilePhoto = profilePhoto;
+    if (birthCertFile) student.birthCertFile = birthCertFile;
+    if (tcFile) student.tcFile = tcFile;
+    if (marklistFile) student.marklistFile = marklistFile;
+    if (extraCertificates) student.extraCertificates = extraCertificates;
+    
+    await student.save();
     res.json({ message: 'Profile updated successfully', student });
-  } catch(err) {
+  } catch (err) {
     res.status(500).json({ error: 'Failed to update profile' });
   }
 });
@@ -54,7 +108,12 @@ router.post('/my-profile', auth, async (req, res) => {
 router.get('/settings/admission', async (req, res) => {
   let setting = await Setting.findOne({ key: 'admissionActive' });
   if (!setting) {
-    setting = await Setting.create({ key: 'admissionActive', value: { active: true, message: '', deadline: null } });
+    const threeDaysTwoHours = new Date(Date.now() + (3 * 24 * 60 * 60 * 1000) + (2 * 60 * 60 * 1000));
+    setting = new Setting({
+      key: 'admissionActive',
+      value: { active: true, message: "Welcome to Al Bayan Kunnath Admission 2026", deadline: threeDaysTwoHours.toISOString() }
+    });
+    await setting.save();
   }
   res.json(setting.value);
 });
@@ -74,25 +133,9 @@ router.post('/admissions', async (req, res) => {
     return res.status(400).json({ error: `Admissions are closed. ${isPastDeadline ? 'The deadline has passed.' : (setting.value.message || '')}` });
   }
   
-  const existingUser = await User.findOne({ username: req.body.phone });
-  if (existingUser) {
-    return res.status(400).json({ error: 'This phone number is already registered.' });
-  }
-  
   try {
     const student = new Student(req.body);
     await student.save();
-
-    // Default student login: Username=Phone, Password=DOB (e.g., YYYY-MM-DD or whatever they entered)
-    const hashedPassword = await bcrypt.hash(student.dob, 10);
-    const user = new User({
-      username: student.phone,
-      password: hashedPassword,
-      role: 'student',
-      studentRef: student._id
-    });
-    await user.save();
-
     res.json({ message: 'Admission submitted successfully!', student });
   } catch (err) {
     res.status(500).json({ error: 'Error submitting admission', details: err.message });
@@ -105,32 +148,54 @@ router.get('/students', auth, isAdmin, async (req, res) => {
   res.json(students);
 });
 
-// Update Student Status (Admin)
-router.patch('/students/:id/status', auth, isAdmin, async (req, res) => {
-  const { status } = req.body;
-  const student = await Student.findByIdAndUpdate(req.params.id, { status }, { new: true });
-  res.json({ message: `Student status updated to ${status}`, student });
+// Move Candidate to Official Student
+router.patch('/students/:id/approve', auth, isAdmin, async (req, res) => {
+  const student = await Student.findByIdAndUpdate(req.params.id, { status: 'approved', isStudent: true }, { new: true });
+  res.json({ message: 'Candidate moved to Students list', student });
+});
+
+// Update Student Note (Admin)
+router.patch('/students/:id/note', auth, isAdmin, async (req, res) => {
+  const { adminNote } = req.body;
+  const student = await Student.findByIdAndUpdate(req.params.id, { adminNote }, { new: true });
+  res.json({ message: 'Note updated', student });
 });
 
 // Delete Student (Admin)
 router.delete('/students/:id', auth, isAdmin, async (req, res) => {
   await Student.findByIdAndDelete(req.params.id);
   await User.findOneAndDelete({ studentRef: req.params.id });
-  // Also delete their results?
   await Result.deleteMany({ student: req.params.id });
   res.json({ message: 'Student and related data deleted completely' });
 });
 
 // Publish Result (Admin)
 router.post('/results', auth, isAdmin, async (req, res) => {
-  const result = new Result(req.body);
-  await result.save();
-  res.json({ message: 'Result published successfully', result });
+  try {
+    const { student, year, examType, subjects } = req.body;
+    const totalMarks = subjects.reduce((sum, s) => sum + (Number(s.mark) || 0), 0);
+    
+    // Automatically determine grade
+    let grade = 'F';
+    const percentage = (totalMarks / (subjects.length * 100)) * 100;
+    if (percentage >= 90) grade = 'A+';
+    else if (percentage >= 80) grade = 'A';
+    else if (percentage >= 70) grade = 'B+';
+    else if (percentage >= 60) grade = 'B';
+    else if (percentage >= 50) grade = 'C+';
+    else if (percentage >= 40) grade = 'C';
+
+    const result = new Result({ student, year, examType, subjects, totalMarks, grade });
+    await result.save();
+    res.json({ message: 'Result published successfully', result });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to publish result' });
+  }
 });
 
 // Get All Results (Admin)
 router.get('/results', auth, isAdmin, async (req, res) => {
-  const results = await Result.find().populate('student', 'studentName phone profilePhoto aadharFile sslcFile').sort({ publishedDate: -1 });
+  const results = await Result.find().populate('student', 'studentName phone profilePhoto').sort({ publishedDate: -1 });
   res.json(results);
 });
 
@@ -159,6 +224,23 @@ router.post('/gallery', auth, isAdmin, async (req, res) => {
 router.delete('/gallery/:id', auth, isAdmin, async (req, res) => {
   await GalleryItem.findByIdAndDelete(req.params.id);
   res.json({ message: 'Gallery item deleted' });
+});
+
+// POSTERS
+router.get('/posters', async (req, res) => {
+  const posters = await Poster.find().sort({ createdAt: -1 });
+  res.json(posters);
+});
+
+router.post('/posters', auth, isAdmin, async (req, res) => {
+  const poster = new Poster(req.body);
+  await poster.save();
+  res.json(poster);
+});
+
+router.delete('/posters/:id', auth, isAdmin, async (req, res) => {
+  await Poster.findByIdAndDelete(req.params.id);
+  res.json({ message: 'Poster deleted' });
 });
 
 // Change Password (Admin)

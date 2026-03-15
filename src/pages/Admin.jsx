@@ -13,11 +13,17 @@ function Admin() {
   const [admissionMsg, setAdmissionMsg] = useState("");
   const [results, setResults] = useState([]);
 
-  // Result Form
-  const [resultStudent, setResultStudent] = useState("");
-  const [examName, setExamName] = useState("");
-  const [totalMarks, setTotalMarks] = useState("");
-  const [grade, setGrade] = useState("");
+  // Result Form States (Enhanced)
+  const [resYear, setResYear] = useState(new Date().getFullYear().toString());
+  const [resExamType, setResExamType] = useState("Midterm");
+  const [resStudentId, setResStudentId] = useState("");
+  const [resSubjects, setResSubjects] = useState([{ subject: "", mark: "" }]);
+
+  // Poster States
+  const [posters, setPosters] = useState([]);
+  const [posterTitle, setPosterTitle] = useState("");
+  const [posterFile, setPosterFile] = useState(null);
+  const [uploadingPoster, setUploadingPoster] = useState(false);
 
   // Gallery Form
   const [galleryTitle, setGalleryTitle] = useState("");
@@ -25,16 +31,21 @@ function Admin() {
   const [galleryItems, setGalleryItems] = useState([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   
-  // Security states
+  // Security
   const [newPassword, setNewPassword] = useState("");
   const [passwordChangeMsg, setPasswordChangeMsg] = useState({ text: "", type: "" });
 
-  // Deadline & Notification states
+  // Deadline & Notification
   const [admissionDeadline, setAdmissionDeadline] = useState("");
   const [notifications, setNotifications] = useState([]);
   const [newNote, setNewNote] = useState({ title: "", message: "", type: "info" });
 
   const [viewingStudent, setViewingStudent] = useState(null);
+  const [adminNote, setAdminNote] = useState("");
+
+  useEffect(() => {
+    if (viewingStudent) setAdminNote(viewingStudent.adminNote || "");
+  }, [viewingStudent]);
 
   useEffect(() => {
     if (token) {
@@ -43,12 +54,67 @@ function Admin() {
       fetchResults();
       fetchGallery();
       fetchNotifications();
+      fetchPosters();
     }
   }, [token]);
 
-  const fetchNotifications = async () => {
-    const res = await fetch("/api/notifications");
-    if(res.ok) setNotifications(await res.json());
+  const fetchPosters = async () => {
+    const res = await fetch("/api/posters");
+    if(res.ok) setPosters(await res.json());
+  };
+
+  const addSubjectField = () => setResSubjects([...resSubjects, { subject: "", mark: "" }]);
+  const updateSubject = (index, field, value) => {
+    const newSubs = [...resSubjects];
+    newSubs[index][field] = value;
+    setResSubjects(newSubs);
+  };
+
+  const publishResult = async (e) => {
+    e.preventDefault();
+    if(!resStudentId) return alert("Select a student");
+    const res = await fetch("/api/results", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ 
+        student: resStudentId, 
+        year: resYear, 
+        examType: resExamType, 
+        subjects: resSubjects 
+      })
+    });
+    if(res.ok) {
+      alert("Result Published with Auto-Total!");
+      setResSubjects([{ subject: "", mark: "" }]);
+      fetchResults();
+    }
+  };
+
+  const uploadPoster = async (e) => {
+    e.preventDefault();
+    if(!posterFile) return;
+    setUploadingPoster(true);
+    const formData = new FormData();
+    formData.append("file", posterFile);
+    try {
+      const up = await fetch("/api/upload", { method: "POST", body: formData });
+      const upData = await up.json();
+      await fetch("/api/posters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ url: upData.url, title: posterTitle })
+      });
+      alert("Poster Added!");
+      setPosterTitle(""); setPosterFile(null); fetchPosters();
+    } catch(err) { alert("Upload failed"); }
+    finally { setUploadingPoster(false); }
+  };
+
+  const deletePoster = async (id) => {
+    if(window.confirm("Delete poster?")) {
+      await fetch(`/api/posters/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      fetchPosters();
+    }
   };
 
   const handleLogin = async (e) => {
@@ -101,6 +167,11 @@ function Admin() {
     if(res.ok) setGalleryItems(await res.json());
   };
 
+  const fetchNotifications = async () => {
+    const res = await fetch("/api/notifications");
+    if(res.ok) setNotifications(await res.json());
+  };
+
   const updateSetting = async (e) => {
     e.preventDefault();
     const res = await fetch("/api/settings/admission", {
@@ -111,13 +182,32 @@ function Admin() {
     if(res.ok) alert("Settings Updated!");
   };
 
-  const approveStudent = async (id, status) => {
-    const res = await fetch(`/api/students/${id}/status`, {
+  const saveAdminNote = async () => {
+    try {
+      const res = await fetch(`/api/students/${viewingStudent._id}/note`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ adminNote })
+      });
+      if (res.ok) {
+        alert("Note updated successfully");
+        fetchStudents();
+        setViewingStudent({ ...viewingStudent, adminNote });
+      } else alert("Failed to update note");
+    } catch (err) { alert("Error updating note"); }
+  };
+
+  const approveStudent = async (id) => {
+    if(!window.confirm("Move this candidate to official students list?")) return;
+    const res = await fetch(`/api/students/${id}/approve`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status })
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
     });
-    if(res.ok) fetchStudents();
+    if(res.ok) {
+      alert("Approved!");
+      setViewingStudent(null);
+      fetchStudents();
+    }
   };
 
   const addNotification = async (e) => {
@@ -145,37 +235,17 @@ function Admin() {
     fetchStudents();
   };
 
-  const publishResult = async (e) => {
-    e.preventDefault();
-    const res = await fetch("/api/results", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ student: resultStudent, examName, totalMarks: Number(totalMarks), grade })
-    });
-    if(res.ok) {
-      alert("Result Published");
-      setResultStudent(""); setExamName(""); setTotalMarks(""); setGrade("");
-      fetchResults();
-    }
-  };
-
   const uploadMedia = async (e) => {
     e.preventDefault();
     if (!galleryFile) return;
     setUploadingMedia(true);
-    
-    // Upload file to Cloudinary first
     const formData = new FormData();
     formData.append("file", galleryFile);
-    
     try {
       const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
       const uploadData = await uploadRes.json();
-      
       if (!uploadRes.ok) throw new Error(uploadData.error || "Upload failed");
-      
-      // Save URL to MongoDB
-      const res = await fetch("/api/gallery", {
+      await fetch("/api/gallery", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ 
@@ -184,118 +254,113 @@ function Admin() {
           type: galleryFile.type.includes("video") ? "video" : "image"
         })
       });
-      
-      if(res.ok) {
-        alert("Media uploaded successfully!");
-        setGalleryTitle("");
-        setGalleryFile(null);
-        fetchGallery();
-      }
-    } catch(err) {
-      alert(err.message || "Failed to upload media");
-    } finally {
-      setUploadingMedia(false);
-    }
+      alert("Media uploaded!");
+      setGalleryTitle(""); setGalleryFile(null); fetchGallery();
+    } catch(err) { alert(err.message); }
+    finally { setUploadingMedia(false); }
   };
 
   const deleteGalleryItem = async (id) => {
-    if(!window.confirm("Delete this media from gallery?")) return;
+    if(!window.confirm("Delete gallery item?")) return;
     await fetch(`/api/gallery/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
     fetchGallery();
   };
 
   const changeAdminPassword = async (e) => {
     e.preventDefault();
-    if (newPassword.length < 6) {
-      setPasswordChangeMsg({ text: "Password must be at least 6 characters!", type: "error" });
-      return;
-    }
-    try {
-      const res = await fetch("/api/admin/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ newPassword })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setPasswordChangeMsg({ text: "Password updated successfully!", type: "success" });
-        setNewPassword("");
-      } else {
-        setPasswordChangeMsg({ text: data.error || "Update failed", type: "error" });
-      }
-    } catch (err) {
-      setPasswordChangeMsg({ text: "Network error", type: "error" });
+    if (newPassword.length < 6) return alert("Min 6 chars");
+    const res = await fetch("/api/admin/change-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ newPassword })
+    });
+    if (res.ok) {
+      alert("Updated!");
+      setNewPassword("");
     }
   };
 
   if (!token) {
     return (
-      <section className="admin-login container py-5 d-flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
-        <div className="card glass-card p-4 mx-auto text-center shadow-lg border-0" style={{ maxWidth: '400px', width: '100%' }}>
-          <h2 className="mb-4 text-teal fw-bold">ADMIN LOGIN</h2>
-          <form onSubmit={handleLogin}>
-            <div className="mb-3 text-start">
-              <label className="form-label text-muted small px-1 fw-bold">Username</label>
-              <input type="text" className="form-control p-3 bg-light" value={username} onChange={e=>setUsername(e.target.value)} required />
+      <section className="container py-5">
+        <div className="row justify-content-center">
+          <div className="col-md-5">
+            <div className="card shadow-lg border-0 rounded-4">
+              <div className="p-5 text-center bg-dark-teal text-white rounded-top-4">
+                <h3 className="fw-bold">ADMIN ACCESS</h3>
+                <p className="small mb-0 opacity-75">Bayanul Uloom Management</p>
+              </div>
+              <div className="p-4 bg-white rounded-bottom-4">
+                <form onSubmit={handleLogin}>
+                  <div className="mb-3">
+                    <label className="small fw-bold text-muted">USERNAME</label>
+                    <input type="text" className="form-control p-3 bg-light border-0" value={username} onChange={e=>setUsername(e.target.value)} required />
+                  </div>
+                  <div className="mb-4">
+                    <label className="small fw-bold text-muted">PASSWORD</label>
+                    <input type="password" className="form-control p-3 bg-light border-0" value={password} onChange={e=>setPassword(e.target.value)} required />
+                  </div>
+                  <button type="submit" className="btn btn-teal-primary w-100 py-3 fw-bold rounded-pill">SIGN IN</button>
+                </form>
+              </div>
             </div>
-            <div className="mb-4 text-start">
-              <label className="form-label text-muted small px-1 fw-bold">Password</label>
-              <input type="password" className="form-control p-3 bg-light" value={password} onChange={e=>setPassword(e.target.value)} required />
-            </div>
-            <button type="submit" className="btn btn-teal-primary w-100 py-3 fw-bold rounded-pill shadow-sm">SECURE LOGIN</button>
-          </form>
+          </div>
         </div>
       </section>
     );
   }
 
   return (
-    <div className="admin-dashboard container-fluid bg-light min-vh-100 p-0" style={{fontFamily: 'Inter, sans-serif'}}>
+    <div className="container-fluid min-vh-100 bg-light p-0">
       <div className="row g-0">
-        <div className="col-md-3 bg-dark-teal text-white min-vh-100 p-4 shadow-lg sidebar">
-          <h4 className="mb-4 text-center pb-3 border-bottom border-secondary fw-bold">ADMIN PANEL</h4>
-          <div className="nav flex-column nav-pills gap-2 text-start">
-            <button className={`nav-link text-start rounded text-white ${activeTab === 'overview' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('overview')}>📊 Dashboard</button>
-            <button className={`nav-link text-start rounded text-white ${activeTab === 'students' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('students')}>📋 Candidate Records</button>
-            <button className={`nav-link text-start rounded text-white ${activeTab === 'results' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('results')}>📝 Exam & Results</button>
-            <button className={`nav-link text-start rounded text-white ${activeTab === 'gallery' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('gallery')}>📸 Gallery Management</button>
-            <button className={`nav-link text-start rounded text-white ${activeTab === 'notifications' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('notifications')}>📢 Notifications</button>
-            <button className={`nav-link text-start rounded text-white ${activeTab === 'settings' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('settings')}>⚙️ Admission Setup</button>
-            <button className={`nav-link text-start rounded text-white ${activeTab === 'security' ? 'active bg-teal-primary fw-bold shadow-sm' : ''}`} onClick={() => setActiveTab('security')}>🔐 Change Password</button>
+        <div className="col-lg-2 bg-dark-teal text-white sticky-top h-lg-100 p-4">
+          <div className="text-center mb-5">
+            <img src="/logo.png" alt="Logo" width="60" className="rounded-circle mb-2 shadow" />
+            <h6 className="fw-bold">ADMIN PORTAL</h6>
           </div>
-          <button className="btn btn-outline-light w-100 rounded-pill mt-5 fw-bold" onClick={logout}>Sign Out</button>
+          <div className="nav flex-column gap-3">
+            {[
+              { id: 'overview', icon: '📊', label: 'Dashboard' },
+              { id: 'students', icon: '👥', label: 'Candidates' },
+              { id: 'results', icon: '📝', label: 'Exam Results' },
+              { id: 'posters', icon: '🏙️', label: 'Posters' },
+              { id: 'gallery', icon: '📸', label: 'Gallery' },
+              { id: 'notifications', icon: '📢', label: 'Notices' },
+              { id: 'settings', icon: '⚙️', label: 'Admission' },
+              { id: 'security', icon: '🔐', label: 'Security' }
+            ].map(tab => (
+              <button key={tab.id} className={`btn text-start text-white border-0 py-2 px-3 rounded-pill fw-bold ${activeTab === tab.id ? 'bg-teal-primary shadow' : ''}`} onClick={()=>setActiveTab(tab.id)}>
+                {tab.icon} {tab.label}
+              </button>
+            ))}
+          </div>
+          <button className="btn btn-outline-light btn-sm w-100 mt-5 rounded-pill" onClick={logout}>Sign Out</button>
         </div>
-        
-        <div className="col-md-9 p-5 bg-white overflow-auto pb-5">
+
+        <div className="col-lg-10 p-5">
           {activeTab === 'overview' && (
-            <div>
-              <h2 className="mb-4 fw-bold">Dashboard Overview</h2>
-              <div className="row g-4">
-                <div className="col-md-3">
-                  <div className="card p-4 bg-light-teal border-0 shadow-sm rounded-4 text-center h-100">
-                    <h3 className="display-4 fw-bold text-teal">{students.length}</h3>
-                    <p className="text-muted mb-0 fw-medium">Total Students</p>
-                  </div>
+            <div className="row g-4">
+              <div className="col-md-3">
+                <div className="card border-0 shadow-sm p-4 rounded-4 bg-white h-100 text-center">
+                  <h1 className="fw-bold text-teal">{students.length}</h1>
+                  <p className="text-muted fw-bold small mb-0">TOTAL APPLICANTS</p>
                 </div>
-                <div className="col-md-3">
-                  <div className="card p-4 bg-warning-light border-0 shadow-sm rounded-4 text-center h-100">
-                    <h3 className="display-4 fw-bold text-warning">{students.filter(s => s.status === 'pending' || !s.status).length}</h3>
-                    <p className="text-muted mb-0 fw-medium">Pending Apps</p>
-                  </div>
+              </div>
+              <div className="col-md-3">
+                <div className="card border-0 shadow-sm p-4 rounded-4 bg-white h-100 text-center border-start border-warning border-5">
+                  <h1 className="fw-bold text-warning">{students.filter(s=>!s.isStudent).length}</h1>
+                  <p className="text-muted fw-bold small mb-0">NEW CANDIDATES</p>
                 </div>
-                <div className="col-md-3">
-                  <div className="card p-4 bg-light border-0 shadow-sm rounded-4 text-center h-100">
-                    <h3 className="display-4 fw-bold text-teal">{results.length}</h3>
-                    <p className="text-muted mb-0 fw-medium">Results</p>
-                  </div>
+              </div>
+              <div className="col-md-3">
+                <div className="card border-0 shadow-sm p-4 rounded-4 bg-white h-100 text-center border-start border-success border-5">
+                  <h1 className="fw-bold text-success">{students.filter(s=>s.isStudent).length}</h1>
+                  <p className="text-muted fw-bold small mb-0">OFFICIAL STUDENTS</p>
                 </div>
-                <div className="col-md-3">
-                  <div className="card p-4 bg-light border-0 shadow-sm rounded-4 text-center h-100">
-                    <h3 className={`display-5 my-2 fw-bold ${admissionActive ? "text-success" : "text-danger"}`}>
-                      {admissionActive ? "OPEN" : "CLOSED"}
-                    </h3>
-                    <p className="text-muted mb-0 fw-medium">Status</p>
-                  </div>
+              </div>
+              <div className="col-md-3">
+                <div className="card border-0 shadow-sm p-4 rounded-4 bg-white h-100 text-center">
+                  <h4 className={`fw-bold mt-3 ${admissionActive?"text-success":"text-danger"}`}>{admissionActive?"ADMISSION ON":"CLOSED"}</h4>
                 </div>
               </div>
             </div>
@@ -304,332 +369,295 @@ function Admin() {
           {activeTab === 'students' && (
             <div>
               <div className="d-flex justify-content-between align-items-center mb-4">
-                <h2 className="fw-bold mb-0">Student Directory</h2>
-                <button className="btn btn-sm btn-outline-teal fw-bold" onClick={fetchStudents}>🔄 Refresh List</button>
+                 <h2 className="fw-bold">Management</h2>
+                 <div className="btn-group">
+                    <button className="btn btn-teal-primary btn-sm px-3" onClick={fetchStudents}>Refresh</button>
+                 </div>
               </div>
 
               {viewingStudent ? (
-                <div className="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
-                  <div className="bg-teal-primary text-white p-4 d-flex justify-content-between align-items-center">
-                    <h4 className="mb-0 fw-bold">Candidate Profile: {viewingStudent.studentName}</h4>
-                    <button className="btn btn-sm btn-light fw-bold" onClick={() => setViewingStudent(null)}>Close Profile</button>
+                <div className="card border-0 shadow rounded-4 overflow-hidden mb-5">
+                  <div className="bg-teal-primary p-4 text-white d-flex justify-content-between">
+                    <h4 className="mb-0 fw-bold">PROFILING: {viewingStudent.studentName}</h4>
+                    <button className="btn btn-sm btn-light rounded-circle" onClick={()=>setViewingStudent(null)}>╳</button>
                   </div>
                   <div className="card-body p-4 bg-white">
-                    <div className="row g-4">
-                      <div className="col-md-3 text-center border-end">
-                        <img 
-                          src={viewingStudent.profilePhoto || "/logo.png"} 
-                          alt="Profile" 
-                          className="rounded-4 shadow-sm mb-3 w-100" 
-                          style={{aspectRatio: '1/1', objectFit: 'cover', maxWidth: '200px'}} 
-                        />
-                        <h5 className="fw-bold mb-1">{viewingStudent.studentName}</h5>
-                        <p className="badge bg-light text-teal border mb-2">{viewingStudent.status?.toUpperCase()}</p>
-                        <div className="d-grid gap-2 mt-3">
-                          <button className="btn btn-sm btn-success" onClick={() => approveStudent(viewingStudent._id, 'approved')}>Approve Now</button>
-                          <button className="btn btn-sm btn-danger" onClick={() => approveStudent(viewingStudent._id, 'rejected')}>Reject Candidate</button>
+                     <div className="row">
+                        <div className="col-md-3 text-center border-end">
+                           <img src={viewingStudent.profilePhoto || "/logo.png"} className="rounded-4 w-100 mb-3" style={{objectFit:'cover', aspectRatio:'1'}} />
+                           <h5 className="fw-bold">{viewingStudent.studentName}</h5>
+                           <div className="d-grid gap-2 mt-3">
+                             {!viewingStudent.isStudent && <button className="btn btn-success fw-bold" onClick={()=>approveStudent(viewingStudent._id)}>ACCEPT TO DARS</button>}
+                             <button className="btn btn-outline-danger btn-sm" onClick={()=>deleteStudent(viewingStudent._id)}>DELETE RECORD</button>
+                           </div>
                         </div>
-                      </div>
-                      <div className="col-md-9">
-                        <div className="row g-3">
-                          <div className="col-md-6">
-                            <h6 className="text-muted small fw-bold text-uppercase border-bottom pb-1">Personal Details</h6>
-                            <p className="mb-1"><strong>Father:</strong> {viewingStudent.fatherName || "-"}</p>
-                            <p className="mb-1"><strong>Mother:</strong> {viewingStudent.motherName || "-"}</p>
-                            <p className="mb-1"><strong>DOB:</strong> {viewingStudent.dob || "-"}</p>
-                            <p className="mb-1"><strong>Blood Group:</strong> {viewingStudent.bloodGroup || "-"}</p>
-                            <p className="mb-1"><strong>Place:</strong> {viewingStudent.place || "-"}</p>
-                          </div>
-                          <div className="col-md-6">
-                            <h6 className="text-muted small fw-bold text-uppercase border-bottom pb-1">Contact Details</h6>
-                            <p className="mb-1"><strong>Phone:</strong> {viewingStudent.phone || "-"}</p>
-                            <p className="mb-1"><strong>Guardian Phone:</strong> {viewingStudent.guardianPhone || "-"}</p>
-                            <p className="mb-1"><strong>Email:</strong> {viewingStudent.email || "-"}</p>
-                            <p className="mb-1"><strong>Address:</strong> {viewingStudent.address || "-"}</p>
-                          </div>
-                          <div className="col-12 mt-4">
-                            <h6 className="text-muted small fw-bold text-uppercase border-bottom pb-1">Uploaded Documents</h6>
-                            <div className="d-flex flex-wrap gap-3 mt-2">
-                              {[
-                                { label: "Aadhar Card", file: viewingStudent.aadharFile },
-                                { label: "SSLC Book", file: viewingStudent.sslcFile },
-                                { label: "Birth Cert", file: viewingStudent.birthCertFile },
-                                { label: "TC File", file: viewingStudent.tcFile },
-                                { label: "Marklist", file: viewingStudent.marklistFile }
-                              ].map((doc, idx) => doc.file ? (
-                                <a key={idx} href={doc.file} target="_blank" rel="noreferrer" className="btn btn-outline-teal btn-sm shadow-sm d-flex align-items-center gap-2">
-                                  📂 {doc.label}
-                                </a>
-                              ) : (
-                                <span key={idx} className="btn btn-sm btn-light disabled text-muted border">❌ {doc.label} (Pending)</span>
-                              ))}
+                        <div className="col-md-9 px-4">
+                           <h6 className="fw-bold text-teal text-uppercase border-bottom pb-2">Candidate Details</h6>
+                           <div className="row g-3 mt-1 mb-4">
+                              <div className="col-6"><strong>DOB:</strong> {viewingStudent.dob}</div>
+                              <div className="col-6"><strong>Phone:</strong> {viewingStudent.phone}</div>
+                              <div className="col-6"><strong>Father:</strong> {viewingStudent.fatherName}</div>
+                              <div className="col-6"><strong>Mother:</strong> {viewingStudent.motherName}</div>
+                              <div className="col-12"><strong>Address:</strong> {viewingStudent.address}</div>
+                           </div>
+
+                            <div className="mt-4 p-3 bg-warning bg-opacity-10 border border-warning rounded-4">
+                               <label className="small fw-bold text-dark mb-2"><i className="bi bi-pencil-square me-2"></i>OFFICE NOTES / INSTRUCTIONS</label>
+                               <textarea 
+                                 className="form-control bg-white border-0 shadow-sm mb-2" 
+                                 rows="2" 
+                                 value={adminNote} 
+                                 onChange={e=>setAdminNote(e.target.value)} 
+                                 placeholder="Add registration notes (e.g. Above 12 year old, need bio update)" 
+                               />
+                               <button className="btn btn-warning btn-sm fw-bold px-3 rounded-pill" onClick={saveAdminNote}>SAVE NOTE</button>
                             </div>
-                          </div>
-                          <div className="col-12 mt-4">
-                            <h6 className="text-muted small fw-bold text-uppercase border-bottom pb-1">Student Bio / About</h6>
-                            <div className="p-3 bg-light rounded-3 mt-2">
-                               {viewingStudent.bio || "No bio provided by student."}
-                            </div>
-                          </div>
+                           <h6 className="fw-bold text-teal text-uppercase border-bottom pb-2">Verification Files</h6>
+                           <div className="row g-2 mt-2">
+                             {[
+                               {l:'Aadhar Card', f:viewingStudent.aadharFile},
+                               {l:'SSLC Copy', f:viewingStudent.sslcFile},
+                               {l:'Birth Cert', f:viewingStudent.birthCertFile},
+                               {l:'TC File', f:viewingStudent.tcFile},
+                               {l:'Marklist', f:viewingStudent.marklistFile}
+                             ].map((d,i)=> (
+                               <div className="col-md-4" key={i}>
+                                  <div className="p-2 border rounded text-center small bg-light h-100">
+                                     <div className="fw-bold">{d.l}</div>
+                                     {d.f ? (
+                                       <a href={d.f} target="_blank" rel="noreferrer" className="btn btn-xs btn-link p-0 text-success fw-bold">👁 VIEW ONLINE</a>
+                                     ) : <span className="text-danger">NOT UPLOADED</span>}
+                                  </div>
+                               </div>
+                             ))}
+                           </div>
                         </div>
-                      </div>
-                    </div>
+                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="table-responsive bg-white shadow-sm rounded-4 p-3 border">
+                <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
                   <table className="table table-hover align-middle mb-0">
                     <thead className="table-light">
-                      <tr>
-                        <th className="text-muted">NAME</th>
-                        <th className="text-muted">PHONE/USER</th>
-                        <th className="text-muted">STATUS</th>
-                        <th className="text-muted">DOCS</th>
-                        <th className="text-muted text-end">ACTION</th>
-                      </tr>
+                       <tr><th className="ps-4">Candidate</th><th>Phone</th><th>Level</th><th>Action</th></tr>
                     </thead>
                     <tbody>
-                      {students.map(s => (
-                        <tr key={s._id}>
-                          <td className="fw-bold fs-6">
-                            {s.profilePhoto && <img src={s.profilePhoto} alt="Profile" className="rounded-circle me-2" width="30" height="30" style={{objectFit: 'cover'}}/>}
-                            {s.studentName}
-                          </td>
-                          <td className="font-monospace text-teal">{s.phone}</td>
-                          <td>
-                            <span className={`badge ${s.status === 'approved' ? 'bg-success' : s.status === 'rejected' ? 'bg-danger' : 'bg-warning text-dark'}`}>
-                              {s.status?.toUpperCase() || 'PENDING'}
-                            </span>
-                          </td>
-                          <td>
-                             <span className="small text-muted">
-                               {(s.aadharFile ? 1 : 0) + (s.sslcFile ? 1 : 0) + (s.birthCertFile ? 1 : 0)} / 5
-                             </span>
-                          </td>
-                          <td className="text-end">
-                            <div className="btn-group gap-1">
-                              <button className="btn btn-sm btn-teal-primary px-3 py-1" onClick={() => setViewingStudent(s)}>View Detail</button>
-                               {s.status === 'pending' && (
-                                <>
-                                  <button className="btn btn-sm btn-success px-2 py-1" onClick={() => approveStudent(s._id, 'approved')}>Approve</button>
-                                  <button className="btn btn-sm btn-danger px-2 py-1" onClick={() => approveStudent(s._id, 'rejected')}>Reject</button>
-                                </>
-                              )}
-                              <button className="btn btn-sm btn-outline-danger px-1 py-1" onClick={() => deleteStudent(s._id)}>🗑️</button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                      {students.length === 0 && <tr><td colSpan="5" className="text-center text-muted py-5">No students found</td></tr>}
+                       {students.map(s => (
+                         <tr key={s._id}>
+                            <td className="ps-4 py-3 fw-bold">{s.studentName} {s.isStudent && <span className="badge bg-success small ms-2">Student</span>}</td>
+                            <td>{s.phone}</td>
+                            <td><span className={`badge ${s.status==='approved'?'bg-success':'bg-warning text-dark'}`}>{s.status||'pending'}</span></td>
+                            <td><button className="btn btn-sm btn-teal-primary px-3 rounded-pill" onClick={()=>setViewingStudent(s)}>View dossier</button></td>
+                         </tr>
+                       ))}
                     </tbody>
                   </table>
                 </div>
               )}
-              <p className="mt-3 small text-muted">* Student login credentials are automatically set to Phone (username) and DOB (password).</p>
-            </div>
-          )}
-
-          {activeTab === 'settings' && (
-            <div style={{maxWidth: "600px"}}>
-              <h2 className="mb-4 fw-bold">System Settings</h2>
-              <div className="card shadow-sm border rounded-4 p-4 mb-4">
-                <h5 className="mb-3 text-teal fw-bold">Admission Controls</h5>
-                <form onSubmit={updateSetting}>
-                  <div className="form-check form-switch mb-3 ps-5">
-                    <input className="form-check-input fs-4 ms-n5" type="checkbox" id="admissionToggle" checked={admissionActive} onChange={(e) => setAdmissionActive(e.target.checked)} />
-                    <label className="form-check-label ms-2 mt-1 fw-bold fs-5" htmlFor="admissionToggle">
-                      Admissions Open
-                    </label>
-                  </div>
-                  <div className="mb-4">
-                    <label className="form-label text-muted small fw-bold">Admission Note (Criteria/Guidelines)</label>
-                    <textarea className="form-control p-3 bg-light" rows="2" value={admissionMsg} onChange={(e) => setAdmissionMsg(e.target.value)} placeholder="e.g. Applicants must be above 12 years old. Original documents required at time of interview." />
-                    <div className="form-text mt-2 text-info small">This note will appear at the top of the Registration Form for all applicants.</div>
-                  </div>
-                  <div className="mb-4">
-                    <label className="form-label text-muted small fw-bold">Admission Deadline (Auto-Close)</label>
-                    <input type="datetime-local" className="form-control p-3 bg-light" value={admissionDeadline} onChange={(e) => setAdmissionDeadline(e.target.value)} />
-                    <div className="form-text mt-2 small">Admissions will automatically disable after this time.</div>
-                  </div>
-                  <button type="submit" className="btn btn-teal-primary w-100 py-3 rounded shadow-sm fw-bold">Save Changes</button>
-                </form>
-              </div>
             </div>
           )}
 
           {activeTab === 'results' && (
-            <div>
-              <h2 className="mb-4 fw-bold">Publish Results</h2>
-              <div className="card shadow-sm border rounded-4 p-4 mb-5 bg-white">
-                <form onSubmit={publishResult} className="row g-4 align-items-end">
-                  <div className="col-md-4">
-                    <label className="form-label fw-bold text-muted small">Select Student</label>
-                    <select className="form-select p-3 bg-light" value={resultStudent} onChange={e=>setResultStudent(e.target.value)} required>
-                      <option value="">-- Choose Student --</option>
-                      {students.map(s => <option key={s._id} value={s._id}>{s.studentName} ({s.phone})</option>)}
-                    </select>
-                  </div>
-                  <div className="col-md-4">
-                    <label className="form-label fw-bold text-muted small">Exam Name</label>
-                    <input type="text" className="form-control p-3 bg-light" placeholder="Mid Term 2026" value={examName} onChange={e=>setExamName(e.target.value)} required />
-                  </div>
-                  <div className="col-md-2">
-                    <label className="form-label fw-bold text-muted small">Marks Output</label>
-                    <input type="number" className="form-control p-3 bg-light" placeholder="e.g. 500" value={totalMarks} onChange={e=>setTotalMarks(e.target.value)} required />
-                  </div>
-                  <div className="col-md-2">
-                    <label className="form-label fw-bold text-muted small">Grade</label>
-                    <input type="text" className="form-control p-3 bg-light" placeholder="A+" value={grade} onChange={e=>setGrade(e.target.value)} required />
-                  </div>
-                  <div className="col-12 mt-4 text-end">
-                    <button type="submit" className="btn btn-teal-primary px-5 py-3 rounded shadow-sm fw-bold w-100">Publish Now</button>
-                  </div>
-                </form>
-              </div>
+            <div className="row">
+                <div className="col-md-5">
+                  <div className="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                     <h4 className="fw-bold text-teal mb-4"><i className="bi bi-patch-check-fill me-2"></i>Publish Marksheet</h4>
+                     <form onSubmit={publishResult}>
+                        <div className="row g-2 mb-3">
+                           <div className="col-12 mb-2">
+                               <label className="small fw-bold text-muted text-uppercase">Academic Year</label>
+                               <input className="form-control bg-light border-0 py-2" value={resYear} onChange={e=>setResYear(e.target.value)} placeholder="2025-26" />
+                           </div>
+                           <div className="col-12">
+                               <label className="small fw-bold text-muted text-uppercase">Student Candidate</label>
+                               <select className="form-select bg-light border-0 py-2" value={resStudentId} onChange={e=>setResStudentId(e.target.value)} required>
+                                  <option value="">-- Choose Student --</option>
+                                  {students.map(s => <option key={s._id} value={s._id}>{s.studentName}</option>)}
+                               </select>
+                           </div>
+                        </div>
+                        <div className="mb-4">
+                           <label className="small fw-bold text-muted text-uppercase">Examination Category</label>
+                           <select className="form-select bg-light border-0 py-2" value={resExamType} onChange={e=>setResExamType(e.target.value)}>
+                              <option value="Quarterly">Quarterly Exam</option>
+                              <option value="Midterm">Mid-Term Exam</option>
+                              <option value="Final">Final Examination</option>
+                           </select>
+                        </div>
+                        <hr className="opacity-10"/>
+                        <div className="d-flex justify-content-between align-items-center mb-3">
+                           <h6 className="fw-bold mb-0 text-secondary">SUBJECT-WISE MARKS</h6>
+                           <button type="button" className="btn btn-sm btn-teal-primary px-3 rounded-pill" onClick={addSubjectField}>+ ADD MORE</button>
+                        </div>
+                        <div className="res-subject-container" style={{maxHeight: 250, overflowY: 'auto', overflowX:'hidden'}}>
+                          {resSubjects.map((s,i) => (
+                             <div className="row g-2 mb-2 align-items-center animate-fade-in" key={i}>
+                                <div className="col-7"><input className="form-control form-control-sm bg-light border-0" placeholder="Subject Name" value={s.subject} onChange={e=>updateSubject(i,'subject',e.target.value)} required /></div>
+                                <div className="col-3"><input type="number" className="form-control form-control-sm bg-light border-0" placeholder="Mark" value={s.mark} onChange={e=>updateSubject(i,'mark',e.target.value)} required /></div>
+                                <div className="col-2 text-end">
+                                   {resSubjects.length > 1 && <button type="button" className="btn btn-sm text-danger p-0" onClick={()=>setResSubjects(resSubjects.filter((_,idx)=>idx!==i))}><i className="bi bi-trash"></i></button>}
+                                </div>
+                             </div>
+                          ))}
+                        </div>
+                        
+                        <div className="mt-4 p-3 bg-light rounded-4 border-start border-teal border-4">
+                           <div className="d-flex justify-content-between">
+                              <span className="fw-bold text-muted small">TOTAL SCORE:</span>
+                              <span className="fw-bold text-teal">{resSubjects.reduce((acc,curr)=>acc+(Number(curr.mark)||0), 0)}</span>
+                           </div>
+                        </div>
 
-              <h4 className="mb-3 fw-bold">Published Results Log</h4>
-              <div className="table-responsive shadow-sm rounded-4 border bg-white p-2">
-                <table className="table table-hover mb-0 align-middle">
-                  <thead className="table-light"><tr><th className="text-muted">STUDENT</th><th className="text-muted">EXAM</th><th className="text-muted">TOTAL SCORE</th><th className="text-muted">GRADE</th><th className="text-muted">DATE</th></tr></thead>
-                  <tbody>
-                    {results.map(r => (
-                      <tr key={r._id}>
-                        <td className="fw-bold">{r.student?.studentName || "Deleted User"}</td>
-                        <td>{r.examName}</td>
-                        <td className="fw-bold">{r.totalMarks}</td>
-                        <td><span className="badge bg-success py-2 px-3">{r.grade}</span></td>
-                        <td className="text-muted small">{new Date(r.publishedDate).toLocaleDateString()}</td>
-                      </tr>
-                    ))}
-                    {results.length === 0 && <tr><td colSpan="5" className="text-center py-5 text-muted">No results</td></tr>}
-                  </tbody>
-                </table>
-              </div>
+                        <button className="btn btn-teal-primary w-100 py-3 mt-4 fw-bold rounded-pill shadow-sm">
+                           GENERATE & PUBLISH CERTIFICATE
+                        </button>
+                     </form>
+                  </div>
+                </div>
+                <div className="col-md-7">
+                  <div className="card border-0 shadow-sm rounded-4 p-4">
+                     <h5 className="fw-bold mb-4 text-secondary">PUBLISHED RESULTS LOG</h5>
+                     <div className="table-responsive">
+                        <table className="table table-hover align-middle">
+                           <thead className="table-light"><tr className="small text-muted"><th>STUDENT</th><th>TYPE</th><th>YEAR</th><th>TOTAL</th><th>GRADE</th></tr></thead>
+                           <tbody>
+                              {results.map(r => (
+                                <tr key={r._id}>
+                                   <td className="fw-bold">{r.student?.studentName}</td>
+                                   <td><span className="badge bg-light text-dark border">{r.examType}</span></td>
+                                   <td>{r.year}</td>
+                                   <td className="fw-bold text-teal">{r.totalMarks}</td>
+                                   <td><span className={`badge ${r.grade.includes('A')?'bg-success':'bg-primary'}`}>{r.grade}</span></td>
+                                </tr>
+                              ))}
+                           </tbody>
+                        </table>
+                     </div>
+                  </div>
+                </div>
+            </div>
+          )}
+
+          {activeTab === 'posters' && (
+            <div>
+               <h2 className="fw-bold mb-4">Admission Posters</h2>
+               <div className="card border-0 shadow-sm p-4 rounded-4 mb-5">
+                  <form onSubmit={uploadPoster} className="row g-3">
+                     <div className="col-md-5">
+                        <label className="small fw-bold">Poster Title</label>
+                        <input className="form-control bg-light" value={posterTitle} onChange={e=>setPosterTitle(e.target.value)} placeholder="e.g. Admission 2026 Poster" required />
+                     </div>
+                     <div className="col-md-5">
+                        <label className="small fw-bold">Choose File</label>
+                        <input type="file" className="form-control bg-light" onChange={e=>setPosterFile(e.target.files[0])} required />
+                     </div>
+                     <div className="col-md-2 d-flex align-items-end">
+                        <button className="btn btn-teal-primary w-100 fw-bold" disabled={uploadingPoster}>{uploadingPoster?"...":"ADD"}</button>
+                     </div>
+                  </form>
+               </div>
+               <div className="row g-4">
+                  {posters.map(p => (
+                    <div className="col-md-4" key={p._id}>
+                       <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
+                          <img src={p.url} className="w-100" style={{height:'300px', objectFit:'contain', background:'#f0f0f0'}} />
+                          <div className="p-3 d-flex justify-content-between align-items-center">
+                             <span className="fw-bold small">{p.title}</span>
+                             <button className="btn btn-sm btn-outline-danger" onClick={()=>deletePoster(p._id)}>Remove</button>
+                          </div>
+                       </div>
+                    </div>
+                  ))}
+               </div>
             </div>
           )}
 
           {activeTab === 'gallery' && (
             <div>
-              <h2 className="mb-4 fw-bold">Manage Gallery</h2>
-              
-              <div className="card shadow-sm border rounded-4 p-4 mb-5 bg-white">
-                <h5 className="mb-3 text-teal fw-bold">Upload Photo or Video</h5>
-                <form onSubmit={uploadMedia} className="row g-4 align-items-end">
-                  <div className="col-md-5">
-                    <label className="form-label fw-bold text-muted small">File (Image/Video)</label>
-                    <input type="file" className="form-control p-3 bg-light" accept="image/*,video/*" onChange={e=>setGalleryFile(e.target.files[0])} required />
-                  </div>
-                  <div className="col-md-5">
-                    <label className="form-label fw-bold text-muted small">Title / Caption</label>
-                    <input type="text" className="form-control p-3 bg-light" placeholder="Annual Event 2026" value={galleryTitle} onChange={e=>setGalleryTitle(e.target.value)} required />
-                  </div>
-                  <div className="col-md-2">
-                    <button type="submit" className="btn btn-teal-primary w-100 py-3 rounded fw-bold shadow-sm" disabled={uploadingMedia}>
-                      {uploadingMedia ? "Uploading..." : "Upload"}
-                    </button>
-                  </div>
+              <h2 className="mb-4 fw-bold">Media Repository</h2>
+              <div className="card border-0 shadow-sm p-4 rounded-4 mb-4">
+                <form onSubmit={uploadMedia} className="row g-3">
+                  <div className="col-md-5"><input className="form-control bg-light" placeholder="Event Title" value={galleryTitle} onChange={e=>setGalleryTitle(e.target.value)} required /></div>
+                  <div className="col-md-5"><input type="file" className="form-control bg-light" onChange={e=>setGalleryFile(e.target.files[0])} required /></div>
+                  <div className="col-md-2"><button type="submit" className="btn btn-teal-primary w-100 fw-bold" disabled={uploadingMedia}>{uploadingMedia?"...":"UPLOAD"}</button></div>
                 </form>
               </div>
-
-              <h4 className="mb-3 fw-bold">Current Gallery</h4>
-              <div className="row g-4">
-                {galleryItems.map(item => (
-                  <div className="col-md-4 col-sm-6" key={item._id}>
-                    <div className="card shadow-sm border-0 rounded-4 overflow-hidden position-relative">
-                      {item.type === 'video' ? (
-                        <video src={item.url} controls className="w-100" style={{objectFit: 'cover', height: '200px'}} />
-                      ) : (
-                        <img src={item.url} alt={item.title} className="w-100" style={{objectFit: 'cover', height: '200px'}} />
-                      )}
-                      <div className="p-3 bg-white">
-                        <p className="mb-1 fw-bold text-truncate">{item.title}</p>
-                        <div className="d-flex justify-content-between align-items-center mt-2">
-                          <span className="badge bg-light text-dark border small">{item.type.toUpperCase()}</span>
-                          <button onClick={() => deleteGalleryItem(item._id)} className="btn btn-sm btn-outline-danger">Delete</button>
-                        </div>
-                      </div>
+              <div className="row g-3">
+                 {galleryItems.map(item => (
+                    <div className="col-md-3" key={item._id}>
+                       <div className="card border-0 h-100 shadow-sm rounded-4 overflow-hidden">
+                          {item.type==='video'? <video src={item.url} style={{height:150, objectFit:'cover'}} /> : <img src={item.url} style={{height:150, objectFit:'cover'}} />}
+                          <div className="p-2 d-flex justify-content-between">
+                             <span className="small text-truncate">{item.title}</span>
+                             <button className="btn btn-xs btn-outline-danger border-0" onClick={()=>deleteGalleryItem(item._id)}>╳</button>
+                          </div>
+                       </div>
                     </div>
-                  </div>
-                ))}
-                {galleryItems.length === 0 && <p className="text-muted w-100 mt-4 ms-3">No gallery items uploaded yet.</p>}
+                 ))}
               </div>
             </div>
           )}
 
           {activeTab === 'notifications' && (
             <div>
-              <h2 className="mb-4 fw-bold">Manage Notifications</h2>
-              <div className="card shadow-sm border rounded-4 p-4 mb-5 bg-white">
-                <h5 className="mb-3 text-teal fw-bold">Create New Announcement</h5>
-                <form onSubmit={addNotification} className="row g-3">
-                  <div className="col-md-4">
-                    <label className="form-label small fw-bold">Title</label>
-                    <input type="text" className="form-control bg-light" value={newNote.title} onChange={e=>setNewNote({...newNote, title: e.target.value})} required placeholder="e.g. Results Out!" />
-                  </div>
-                  <div className="col-md-5">
-                    <label className="form-label small fw-bold">Message</label>
-                    <input type="text" className="form-control bg-light" value={newNote.message} onChange={e=>setNewNote({...newNote, message: e.target.value})} required placeholder="Full announcement detail..." />
-                  </div>
-                  <div className="col-md-3">
-                    <label className="form-label small fw-bold">Alert Type</label>
-                    <select className="form-select bg-light" value={newNote.type} onChange={e=>setNewNote({...newNote, type: e.target.value})}>
-                      <option value="info">Info (Blue)</option>
-                      <option value="warning">Warning (Yellow)</option>
-                      <option value="urgent">Urgent (Red)</option>
-                      <option value="result">Result (Green)</option>
-                    </select>
-                  </div>
-                  <div className="col-12 text-end">
-                    <button type="submit" className="btn btn-teal-primary px-4 fw-bold">Post Announcement</button>
-                  </div>
-                </form>
-              </div>
-
-              <h4 className="mb-3 fw-bold">Active Announcements</h4>
-              <div className="list-group shadow-sm border-0">
-                {notifications.map(n => (
-                  <div key={n._id} className="list-group-item list-group-item-action border-0 shadow-sm mb-2 rounded-3 d-flex justify-content-between align-items-center">
-                    <div>
-                      <span className={`badge me-2 ${n.type === 'urgent' ? 'bg-danger' : n.type === 'warning' ? 'bg-warning text-dark' : n.type === 'result' ? 'bg-success' : 'bg-info'}`}>
-                        {n.type.toUpperCase()}
-                      </span>
-                      <strong className="text-teal">{n.title}</strong>: <span className="ms-1">{n.message}</span>
-                      <div className="small text-muted mt-1">{new Date(n.createdAt).toLocaleString()}</div>
+              <h2 className="mb-4 fw-bold">Live Notices</h2>
+              <div className="card border-0 shadow-sm p-4 rounded-4 mb-4">
+                 <form onSubmit={addNotification} className="row g-2">
+                    <div className="col-md-4"><input className="form-control bg-light" placeholder="Title" value={newNote.title} onChange={e=>setNewNote({...newNote, title:e.target.value})} required /></div>
+                    <div className="col-md-5"><input className="form-control bg-light" placeholder="Message" value={newNote.message} onChange={e=>setNewNote({...newNote, message:e.target.value})} required /></div>
+                    <div className="col-md-3">
+                       <select className="form-select bg-light" value={newNote.type} onChange={e=>setNewNote({...newNote, type:e.target.value})}>
+                          <option value="info">Info</option>
+                          <option value="urgent">Urgent</option>
+                          <option value="result">Result</option>
+                       </select>
                     </div>
-                    <button onClick={() => deleteNotification(n._id)} className="btn btn-sm btn-link text-danger text-decoration-none">Remove</button>
-                  </div>
-                ))}
-                {notifications.length === 0 && <p className="text-muted p-4 text-center">No active notifications.</p>}
+                    <div className="col-12 mt-3"><button className="btn btn-teal-primary px-5 fw-bold rounded-pill">POST ANNOUNCEMENT</button></div>
+                 </form>
+              </div>
+              {notifications.map(n => (
+                <div key={n._id} className="alert alert-light border-start border-teal border-5 shadow-sm d-flex justify-content-between align-items-center">
+                   <div><strong className="text-teal">{n.title}</strong>: {n.message}</div>
+                   <button className="btn btn-sm btn-link text-danger" onClick={()=>deleteNotification(n._id)}>Delete</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'settings' && (
+            <div style={{maxWidth:600}}>
+              <h2 className="fw-bold mb-4">Admission Config</h2>
+              <div className="card border-0 shadow-sm p-4 rounded-4">
+                 <form onSubmit={updateSetting}>
+                    <div className="form-check form-switch mb-4">
+                       <input className="form-check-input" type="checkbox" checked={admissionActive} onChange={e=>setAdmissionActive(e.target.checked)} />
+                       <label className="fw-bold ms-2">Admissions Open</label>
+                    </div>
+                    <div className="mb-3">
+                       <label className="small fw-bold text-muted">NOTICE MESSAGE</label>
+                       <textarea className="form-control bg-light" value={admissionMsg} onChange={e=>setAdmissionMsg(e.target.value)} rows="3" />
+                    </div>
+                    <div className="mb-4">
+                       <label className="small fw-bold text-muted">CLOSING DEADLINE</label>
+                       <input type="datetime-local" className="form-control bg-light" value={admissionDeadline} onChange={e=>setAdmissionDeadline(e.target.value)} />
+                    </div>
+                    <button className="btn btn-teal-primary w-100 py-3 rounded-pill fw-bold shadow">SAVE SETTINGS</button>
+                 </form>
               </div>
             </div>
           )}
 
           {activeTab === 'security' && (
-            <div style={{maxWidth: "500px"}}>
-              <h2 className="mb-4 fw-bold">Security Settings</h2>
-              <div className="card shadow-sm border rounded-4 p-4 bg-white">
-                <h5 className="mb-3 text-teal fw-bold">Change Admin Password</h5>
-                {passwordChangeMsg.text && (
-                  <div className={`alert ${passwordChangeMsg.type === 'success' ? 'alert-success' : 'alert-danger'} small py-2`}>
-                    {passwordChangeMsg.text}
-                  </div>
-                )}
-                <form onSubmit={changeAdminPassword}>
-                  <div className="mb-4">
-                    <label className="form-label text-muted small fw-bold">New Secure Password</label>
-                    <input 
-                      type="password" 
-                      className="form-control p-3 bg-light" 
-                      value={newPassword} 
-                      onChange={(e) => setNewPassword(e.target.value)} 
-                      placeholder="Enter new password"
-                      required
-                      minLength="6"
-                    />
-                    <div className="form-text mt-2 small">Min 6 characters. Use a strong password for security.</div>
-                  </div>
-                  <button type="submit" className="btn btn-teal-primary w-100 py-3 rounded shadow-sm fw-bold">Update Password</button>
-                </form>
+            <div style={{maxWidth:400}}>
+              <h2 className="fw-bold mb-4">Security</h2>
+              <div className="card border-0 shadow-sm p-4 rounded-4">
+                 <form onSubmit={changeAdminPassword}>
+                    <div className="mb-4">
+                       <label className="small fw-bold text-muted">NEW PASSWORD</label>
+                       <input type="password" name="password" className="form-control bg-light" value={newPassword} onChange={e=>setNewPassword(e.target.value)} required />
+                    </div>
+                    <button className="btn btn-teal-primary w-100 py-3 rounded-pill fw-bold">UPDATE PASS</button>
+                 </form>
               </div>
             </div>
           )}

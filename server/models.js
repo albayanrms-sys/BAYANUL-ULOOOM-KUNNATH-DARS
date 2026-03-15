@@ -19,7 +19,7 @@ const studentSchema = new mongoose.Schema({
   dob: String,
   place: String,
   address: String,
-  phone: String,
+  phone: { type: String, required: true },
   guardianPhone: String,
   email: String,
   bloodGroup: String,
@@ -31,13 +31,22 @@ const studentSchema = new mongoose.Schema({
   tcFile: String,
   marklistFile: String,
   status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  isStudent: { type: Boolean, default: false }, // If true, moved from candidate to official student
+  hasCustomCredentials: { type: Boolean, default: false },
   bio: String,
+  adminNote: String, // Instruction for admission registration
+  extraCertificates: [String], // Additional documents/certificates
   createdAt: { type: Date, default: Date.now }
 });
 
 const resultSchema = new mongoose.Schema({
   student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
-  examName: { type: String, required: true },
+  year: String,
+  examType: { type: String, enum: ['Final', 'Midterm', 'Quarterly'], default: 'Midterm' },
+  subjects: [{
+    subject: String,
+    mark: Number
+  }],
   totalMarks: Number,
   grade: String,
   publishedDate: { type: Date, default: Date.now }
@@ -48,6 +57,12 @@ const galleryItemSchema = new mongoose.Schema({
   type: { type: String, enum: ['image', 'video'], default: 'image' },
   title: String,
   uploadedAt: { type: Date, default: Date.now }
+});
+
+const posterSchema = new mongoose.Schema({
+  url: { type: String, required: true },
+  title: String,
+  createdAt: { type: Date, default: Date.now }
 });
 
 const notificationSchema = new mongoose.Schema({
@@ -63,4 +78,5 @@ export const Setting = mongoose.model('Setting', settingSchema);
 export const Student = mongoose.model('Student', studentSchema);
 export const Result = mongoose.model('Result', resultSchema);
 export const GalleryItem = mongoose.model('GalleryItem', galleryItemSchema);
+export const Poster = mongoose.model('Poster', posterSchema);
 export const Notification = mongoose.model('Notification', notificationSchema);
