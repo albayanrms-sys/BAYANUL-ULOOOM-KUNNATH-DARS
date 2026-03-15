@@ -28,9 +28,18 @@ const isAdmin = (req, res, next) => {
 // Login Route (Admin & Student)
 router.post('/login', async (req, res) => {
   let { username, password } = req.body;
-  if (username) username = username.trim();
+  if (!username || !password) return res.status(400).json({ error: 'Missing credentials' });
   
-  const user = await User.findOne({ username });
+  const trimmedUser = username.trim();
+  
+  // Try exact match first (for admin/older accounts)
+  let user = await User.findOne({ username: trimmedUser });
+  
+  // Fallback to case-insensitive if not found
+  if (!user) {
+    user = await User.findOne({ username: { $regex: new RegExp("^" + trimmedUser + "$", "i") } });
+  }
+
   if (!user) return res.status(400).json({ error: 'Invalid credentials' });
   
   const isMatch = await bcrypt.compare(password, user.password);

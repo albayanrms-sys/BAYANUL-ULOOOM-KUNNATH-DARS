@@ -96,17 +96,18 @@ function Admin() {
     setUploadingPoster(true);
     const formData = new FormData();
     formData.append("file", posterFile);
+    formData.append("title", posterTitle);
     try {
-      const up = await fetch("/api/upload", { method: "POST", body: formData });
-      const upData = await up.json();
-      await fetch("/api/posters", {
+      const res = await fetch("/api/posters", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ url: upData.url, title: posterTitle })
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
       });
-      alert("Poster Added!");
-      setPosterTitle(""); setPosterFile(null); fetchPosters();
-    } catch(err) { alert("Upload failed"); }
+      if (res.ok) {
+        alert("Poster Added!");
+        setPosterTitle(""); setPosterFile(null); fetchPosters();
+      } else alert("Upload failed");
+    } catch(err) { alert("Upload error"); }
     finally { setUploadingPoster(false); }
   };
 
@@ -130,10 +131,10 @@ function Admin() {
         localStorage.setItem("adminToken", data.token);
         setToken(data.token);
       } else {
-        alert(data.error || "Login Failed");
+        alert(data.error || "Login Failed. Try 'ramees baqavi' with correct password.");
       }
     } catch(err) {
-      alert("Network Error");
+      alert("Network Error. Check server connection.");
     }
   };
 
@@ -198,15 +199,14 @@ function Admin() {
   };
 
   const approveStudent = async (id) => {
-    if(!window.confirm("Move this candidate to official students list?")) return;
     const res = await fetch(`/api/students/${id}/approve`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
     });
     if(res.ok) {
       alert("Approved!");
-      setViewingStudent(null);
       fetchStudents();
+      setViewingStudent(null);
     }
   };
 
@@ -230,7 +230,7 @@ function Admin() {
   };
 
   const deleteStudent = async (id) => {
-    if(!window.confirm("Delete this student permanently?")) return;
+    if(!window.confirm("Delete student?")) return;
     await fetch(`/api/students/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
     fetchStudents();
   };
@@ -241,426 +241,379 @@ function Admin() {
     setUploadingMedia(true);
     const formData = new FormData();
     formData.append("file", galleryFile);
+    formData.append("title", galleryTitle);
     try {
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-      const uploadData = await uploadRes.json();
-      if (!uploadRes.ok) throw new Error(uploadData.error || "Upload failed");
-      await fetch("/api/gallery", {
+      const res = await fetch("/api/gallery", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ 
-          url: uploadData.url, 
-          title: galleryTitle,
-          type: galleryFile.type.includes("video") ? "video" : "image"
-        })
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
       });
-      alert("Media uploaded!");
-      setGalleryTitle(""); setGalleryFile(null); fetchGallery();
-    } catch(err) { alert(err.message); }
+      if (res.ok) {
+        alert("Media Added!");
+        setGalleryTitle(""); setGalleryFile(null); fetchGallery();
+      } else alert("Upload failed");
+    } catch(err) { alert("Upload error"); }
     finally { setUploadingMedia(false); }
   };
 
   const deleteGalleryItem = async (id) => {
-    if(!window.confirm("Delete gallery item?")) return;
     await fetch(`/api/gallery/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
     fetchGallery();
   };
 
-  const changeAdminPassword = async (e) => {
+  const changePassword = async (e) => {
     e.preventDefault();
-    if (newPassword.length < 6) return alert("Min 6 chars");
     const res = await fetch("/api/admin/change-password", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ newPassword })
     });
-    if (res.ok) {
-      alert("Updated!");
-      setNewPassword("");
+    const data = await res.json();
+    if(res.ok) {
+       setPasswordChangeMsg({ text: "Password updated!", type: "success" });
+       setNewPassword("");
+    } else {
+       setPasswordChangeMsg({ text: data.error || "Failed", type: "danger" });
     }
   };
 
   if (!token) {
     return (
-      <section className="container py-5">
-        <div className="row justify-content-center">
-          <div className="col-md-5">
-            <div className="card shadow-lg border-0 rounded-4">
-              <div className="p-5 text-center bg-dark-teal text-white rounded-top-4">
-                <h3 className="fw-bold">ADMIN ACCESS</h3>
-                <p className="small mb-0 opacity-75">Bayanul Uloom Management</p>
+      <div className="login-container min-vh-100 d-flex align-items-center justify-content-center py-5 bg-dark">
+        <div className="col-md-4">
+          <div className="modern-card animate-up shadow-2xl p-5">
+            <div className="text-center mb-5">
+              <div className="bg-primary p-3 rounded-circle d-inline-block mb-3 text-white">
+                 <i className="bi bi-shield-lock-fill fs-1"></i>
               </div>
-              <div className="p-4 bg-white rounded-bottom-4">
-                <form onSubmit={handleLogin}>
-                  <div className="mb-3">
-                    <label className="small fw-bold text-muted">USERNAME</label>
-                    <input type="text" className="form-control p-3 bg-light border-0" value={username} onChange={e=>setUsername(e.target.value)} required />
-                  </div>
-                  <div className="mb-4">
-                    <label className="small fw-bold text-muted">PASSWORD</label>
-                    <input type="password" className="form-control p-3 bg-light border-0" value={password} onChange={e=>setPassword(e.target.value)} required />
-                  </div>
-                  <button type="submit" className="btn btn-teal-primary w-100 py-3 fw-bold rounded-pill">SIGN IN</button>
-                </form>
-              </div>
+              <h2 className="fw-bold">Admin Authority</h2>
+              <p className="text-muted">Secure Access Only</p>
             </div>
+            <form onSubmit={handleLogin}>
+              <div className="mb-3">
+                <label className="small fw-bold text-muted mb-1">IDENTIFIER</label>
+                <input type="text" className="form-control" placeholder="Admin username" value={username} onChange={e=>setUsername(e.target.value)} required />
+              </div>
+              <div className="mb-4">
+                <label className="small fw-bold text-muted mb-1">SECURITY KEY</label>
+                <input type="password" className="form-control" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} required />
+              </div>
+              <button type="submit" className="btn btn-premium w-100 py-3 fs-5">AUTHENTICATE</button>
+            </form>
           </div>
         </div>
-      </section>
+      </div>
     );
   }
 
   return (
-    <div className="container-fluid min-vh-100 bg-light p-0">
-      <div className="row g-0">
-        <div className="col-lg-2 bg-dark-teal text-white sticky-top h-lg-100 p-4">
-          <div className="text-center mb-5">
-            <img src="/logo.png" alt="Logo" width="60" className="rounded-circle mb-2 shadow" />
-            <h6 className="fw-bold">ADMIN PORTAL</h6>
-          </div>
-          <div className="nav flex-column gap-3">
-            {[
-              { id: 'overview', icon: '📊', label: 'Dashboard' },
-              { id: 'students', icon: '👥', label: 'Candidates' },
-              { id: 'results', icon: '📝', label: 'Exam Results' },
-              { id: 'posters', icon: '🏙️', label: 'Posters' },
-              { id: 'gallery', icon: '📸', label: 'Gallery' },
-              { id: 'notifications', icon: '📢', label: 'Notices' },
-              { id: 'settings', icon: '⚙️', label: 'Admission' },
-              { id: 'security', icon: '🔐', label: 'Security' }
-            ].map(tab => (
-              <button key={tab.id} className={`btn text-start text-white border-0 py-2 px-3 rounded-pill fw-bold ${activeTab === tab.id ? 'bg-teal-primary shadow' : ''}`} onClick={()=>setActiveTab(tab.id)}>
-                {tab.icon} {tab.label}
-              </button>
-            ))}
-          </div>
-          <button className="btn btn-outline-light btn-sm w-100 mt-5 rounded-pill" onClick={logout}>Sign Out</button>
+    <div className="admin-dashboard container-fluid py-4 min-vh-100 bg-light">
+      <div className="row">
+        {/* Sidebar */}
+        <div className="col-md-3 col-lg-2">
+           <div className="modern-card p-3 sticky-top" style={{top:'20px'}}>
+              <h5 className="fw-bold mb-4 px-3 text-primary">ADMIN PANEL</h5>
+              <div className="d-grid gap-2">
+                 {[
+                   {id:'overview', l:'Overview', i:'bi-speedometer2'},
+                   {id:'admissions', l:'Admissions', i:'bi-person-plus'},
+                   {id:'results', l:'Academic Info', i:'bi-clipboard-check'},
+                   {id:'posters', l:'Posters', i:'bi-image'},
+                   {id:'gallery', l:'Gallery', i:'bi-images'},
+                   {id:'notices', l:'Notifications', i:'bi-megaphone'},
+                   {id:'settings', l:'Management', i:'bi-gear'}
+                 ].map(tab => (
+                   <button key={tab.id} className={`btn text-start p-2 rounded-3 d-flex align-items-center gap-3 transition-all ${activeTab===tab.id?'btn-primary':'btn-light'}`} onClick={()=>setActiveTab(tab.id)}>
+                      <i className={`bi ${tab.i}`}></i> {tab.l}
+                   </button>
+                 ))}
+                 <hr/>
+                 <button className="btn btn-outline-danger btn-sm rounded-pill" onClick={logout}>Sign Out</button>
+              </div>
+           </div>
         </div>
 
-        <div className="col-lg-10 p-5">
-          {activeTab === 'overview' && (
-            <div className="row g-4">
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm p-4 rounded-4 bg-white h-100 text-center">
-                  <h1 className="fw-bold text-teal">{students.length}</h1>
-                  <p className="text-muted fw-bold small mb-0">TOTAL APPLICANTS</p>
-                </div>
-              </div>
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm p-4 rounded-4 bg-white h-100 text-center border-start border-warning border-5">
-                  <h1 className="fw-bold text-warning">{students.filter(s=>!s.isStudent).length}</h1>
-                  <p className="text-muted fw-bold small mb-0">NEW CANDIDATES</p>
-                </div>
-              </div>
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm p-4 rounded-4 bg-white h-100 text-center border-start border-success border-5">
-                  <h1 className="fw-bold text-success">{students.filter(s=>s.isStudent).length}</h1>
-                  <p className="text-muted fw-bold small mb-0">OFFICIAL STUDENTS</p>
-                </div>
-              </div>
-              <div className="col-md-3">
-                <div className="card border-0 shadow-sm p-4 rounded-4 bg-white h-100 text-center">
-                  <h4 className={`fw-bold mt-3 ${admissionActive?"text-success":"text-danger"}`}>{admissionActive?"ADMISSION ON":"CLOSED"}</h4>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'students' && (
-            <div>
-              <div className="d-flex justify-content-between align-items-center mb-4">
-                 <h2 className="fw-bold">Management</h2>
-                 <div className="btn-group">
-                    <button className="btn btn-teal-primary btn-sm px-3" onClick={fetchStudents}>Refresh</button>
-                 </div>
-              </div>
-
-              {viewingStudent ? (
-                <div className="card border-0 shadow rounded-4 overflow-hidden mb-5">
-                  <div className="bg-teal-primary p-4 text-white d-flex justify-content-between">
-                    <h4 className="mb-0 fw-bold">PROFILING: {viewingStudent.studentName}</h4>
-                    <button className="btn btn-sm btn-light rounded-circle" onClick={()=>setViewingStudent(null)}>╳</button>
-                  </div>
-                  <div className="card-body p-4 bg-white">
-                     <div className="row">
-                        <div className="col-md-3 text-center border-end">
-                           <img src={viewingStudent.profilePhoto || "/logo.png"} className="rounded-4 w-100 mb-3" style={{objectFit:'cover', aspectRatio:'1'}} />
-                           <h5 className="fw-bold">{viewingStudent.studentName}</h5>
-                           <div className="d-grid gap-2 mt-3">
-                             {!viewingStudent.isStudent && <button className="btn btn-success fw-bold" onClick={()=>approveStudent(viewingStudent._id)}>ACCEPT TO DARS</button>}
-                             <button className="btn btn-outline-danger btn-sm" onClick={()=>deleteStudent(viewingStudent._id)}>DELETE RECORD</button>
-                           </div>
+        {/* Content */}
+        <div className="col-md-9 col-lg-10">
+           <div className="modern-card min-vh-100 p-4">
+              {activeTab === 'overview' && (
+                <div className="row g-4">
+                   <div className="col-12"><h2 className="fw-bold mb-4">System Overview</h2></div>
+                   {[
+                     { l: 'Total Candidates', v: students.length, c: 'primary' },
+                     { l: 'Official Students', v: students.filter(s=>s.isStudent).length, c: 'success' },
+                     { l: 'Pending Review', v: students.filter(s=>s.status==='pending').length, c: 'warning' },
+                     { l: 'Results Published', v: results.length, c: 'info' }
+                   ].map((stat, idx) => (
+                     <div className="col-md-3" key={idx}>
+                        <div className={`p-4 rounded-4 bg-${stat.c} bg-opacity-10 border border-${stat.c} border-opacity-25`}>
+                           <div className={`text-${stat.c} small fw-bold text-uppercase`}>{stat.l}</div>
+                           <div className="display-5 fw-bold">{stat.v}</div>
                         </div>
-                        <div className="col-md-9 px-4">
-                           <h6 className="fw-bold text-teal text-uppercase border-bottom pb-2">Candidate Details</h6>
-                           <div className="row g-3 mt-1 mb-4">
-                              <div className="col-6"><strong>DOB:</strong> {viewingStudent.dob}</div>
-                              <div className="col-6"><strong>Phone:</strong> {viewingStudent.phone}</div>
-                              <div className="col-6"><strong>Father:</strong> {viewingStudent.fatherName}</div>
-                              <div className="col-6"><strong>Mother:</strong> {viewingStudent.motherName}</div>
-                              <div className="col-12"><strong>Address:</strong> {viewingStudent.address}</div>
-                           </div>
+                     </div>
+                   ))}
+                </div>
+              )}
 
-                            <div className="mt-4 p-3 bg-warning bg-opacity-10 border border-warning rounded-4">
-                               <label className="small fw-bold text-dark mb-2"><i className="bi bi-pencil-square me-2"></i>OFFICE NOTES / INSTRUCTIONS</label>
-                               <textarea 
-                                 className="form-control bg-white border-0 shadow-sm mb-2" 
-                                 rows="2" 
-                                 value={adminNote} 
-                                 onChange={e=>setAdminNote(e.target.value)} 
-                                 placeholder="Add registration notes (e.g. Above 12 year old, need bio update)" 
-                               />
-                               <button className="btn btn-warning btn-sm fw-bold px-3 rounded-pill" onClick={saveAdminNote}>SAVE NOTE</button>
-                            </div>
-                           <h6 className="fw-bold text-teal text-uppercase border-bottom pb-2">Verification Files</h6>
-                           <div className="row g-2 mt-2">
-                             {[
-                               {l:'Aadhar Card', f:viewingStudent.aadharFile},
-                               {l:'SSLC Copy', f:viewingStudent.sslcFile},
-                               {l:'Birth Cert', f:viewingStudent.birthCertFile},
-                               {l:'TC File', f:viewingStudent.tcFile},
-                               {l:'Marklist', f:viewingStudent.marklistFile}
-                             ].map((d,i)=> (
-                               <div className="col-md-4" key={i}>
-                                  <div className="p-2 border rounded text-center small bg-light h-100">
-                                     <div className="fw-bold">{d.l}</div>
-                                     {d.f ? (
-                                       <a href={d.f} target="_blank" rel="noreferrer" className="btn btn-xs btn-link p-0 text-success fw-bold">👁 VIEW ONLINE</a>
-                                     ) : <span className="text-danger">NOT UPLOADED</span>}
-                                  </div>
-                               </div>
-                             ))}
+              {activeTab === 'admissions' && (
+                <div>
+                   <h2 className="fw-bold mb-4">Candidate Management</h2>
+                   {viewingStudent ? (
+                     <div className="modern-card shadow-lg p-5 animate-up">
+                        <button className="btn btn-link text-decoration-none p-0 mb-4" onClick={()=>setViewingStudent(null)}>← Back to list</button>
+                        <div className="row g-4">
+                           <div className="col-md-4 text-center border-end">
+                              <img src={viewingStudent.profilePhoto || "/default-avatar.png"} className="rounded-circle mb-3 shadow-sm border border-4 border-white" width="150" height="150" alt="Avatar" />
+                              <h3 className="fw-bold">{viewingStudent.studentName}</h3>
+                              <p className="text-muted">{viewingStudent.phone}</p>
+                              <div className="d-grid gap-2">
+                                 {viewingStudent.isStudent ? (
+                                   <span className="badge bg-success p-2">Official Student</span>
+                                 ) : (
+                                   <button className="btn btn-primary rounded-pill fw-bold" onClick={()=>approveStudent(viewingStudent._id)}>Approve for Admission</button>
+                                 )}
+                                 <button className="btn btn-outline-danger btn-sm rounded-pill" onClick={()=>deleteStudent(viewingStudent._id)}>Delete Record</button>
+                              </div>
+                           </div>
+                           <div className="col-md-8">
+                              <div className="row g-3">
+                                 <div className="col-md-6"><label className="small text-muted fw-bold">FATHER NAME</label><div className="fw-bold">{viewingStudent.fatherName}</div></div>
+                                 <div className="col-md-6"><label className="small text-muted fw-bold">MOTHER NAME</label><div className="fw-bold">{viewingStudent.motherName}</div></div>
+                                 <div className="col-md-6"><label className="small text-muted fw-bold">DATE OF BIRTH</label><div className="fw-bold">{viewingStudent.dob}</div></div>
+                                 <div className="col-md-6"><label className="small text-muted fw-bold">ADDRESS</label><div className="fw-bold">{viewingStudent.address}</div></div>
+                              </div>
+                              <hr className="my-4"/>
+                              <div className="bg-warning bg-opacity-10 p-4 rounded-4 border border-warning">
+                                 <h6 className="fw-bold"><i className="bi bi-pencil-square me-2"></i>Registration Instructions</h6>
+                                 <textarea className="form-control mb-3" rows="3" value={adminNote} onChange={e=>setAdminNote(e.target.value)} placeholder="Type notes for the student to see..."></textarea>
+                                 <button className="btn btn-warning fw-bold px-4 rounded-pill" onClick={saveAdminNote}>Update Information</button>
+                              </div>
                            </div>
                         </div>
                      </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
-                  <table className="table table-hover align-middle mb-0">
-                    <thead className="table-light">
-                       <tr><th className="ps-4">Candidate</th><th>Phone</th><th>Level</th><th>Action</th></tr>
-                    </thead>
-                    <tbody>
-                       {students.map(s => (
-                         <tr key={s._id}>
-                            <td className="ps-4 py-3 fw-bold">{s.studentName} {s.isStudent && <span className="badge bg-success small ms-2">Student</span>}</td>
-                            <td>{s.phone}</td>
-                            <td><span className={`badge ${s.status==='approved'?'bg-success':'bg-warning text-dark'}`}>{s.status||'pending'}</span></td>
-                            <td><button className="btn btn-sm btn-teal-primary px-3 rounded-pill" onClick={()=>setViewingStudent(s)}>View dossier</button></td>
-                         </tr>
-                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'results' && (
-            <div className="row">
-                <div className="col-md-5">
-                  <div className="card border-0 shadow-sm rounded-4 p-4 mb-4">
-                     <h4 className="fw-bold text-teal mb-4"><i className="bi bi-patch-check-fill me-2"></i>Publish Marksheet</h4>
-                     <form onSubmit={publishResult}>
-                        <div className="row g-2 mb-3">
-                           <div className="col-12 mb-2">
-                               <label className="small fw-bold text-muted text-uppercase">Academic Year</label>
-                               <input className="form-control bg-light border-0 py-2" value={resYear} onChange={e=>setResYear(e.target.value)} placeholder="2025-26" />
-                           </div>
-                           <div className="col-12">
-                               <label className="small fw-bold text-muted text-uppercase">Student Candidate</label>
-                               <select className="form-select bg-light border-0 py-2" value={resStudentId} onChange={e=>setResStudentId(e.target.value)} required>
-                                  <option value="">-- Choose Student --</option>
-                                  {students.map(s => <option key={s._id} value={s._id}>{s.studentName}</option>)}
-                               </select>
-                           </div>
-                        </div>
-                        <div className="mb-4">
-                           <label className="small fw-bold text-muted text-uppercase">Examination Category</label>
-                           <select className="form-select bg-light border-0 py-2" value={resExamType} onChange={e=>setResExamType(e.target.value)}>
-                              <option value="Quarterly">Quarterly Exam</option>
-                              <option value="Midterm">Mid-Term Exam</option>
-                              <option value="Final">Final Examination</option>
-                           </select>
-                        </div>
-                        <hr className="opacity-10"/>
-                        <div className="d-flex justify-content-between align-items-center mb-3">
-                           <h6 className="fw-bold mb-0 text-secondary">SUBJECT-WISE MARKS</h6>
-                           <button type="button" className="btn btn-sm btn-teal-primary px-3 rounded-pill" onClick={addSubjectField}>+ ADD MORE</button>
-                        </div>
-                        <div className="res-subject-container" style={{maxHeight: 250, overflowY: 'auto', overflowX:'hidden'}}>
-                          {resSubjects.map((s,i) => (
-                             <div className="row g-2 mb-2 align-items-center animate-fade-in" key={i}>
-                                <div className="col-7"><input className="form-control form-control-sm bg-light border-0" placeholder="Subject Name" value={s.subject} onChange={e=>updateSubject(i,'subject',e.target.value)} required /></div>
-                                <div className="col-3"><input type="number" className="form-control form-control-sm bg-light border-0" placeholder="Mark" value={s.mark} onChange={e=>updateSubject(i,'mark',e.target.value)} required /></div>
-                                <div className="col-2 text-end">
-                                   {resSubjects.length > 1 && <button type="button" className="btn btn-sm text-danger p-0" onClick={()=>setResSubjects(resSubjects.filter((_,idx)=>idx!==i))}><i className="bi bi-trash"></i></button>}
-                                </div>
-                             </div>
-                          ))}
-                        </div>
-                        
-                        <div className="mt-4 p-3 bg-light rounded-4 border-start border-teal border-4">
-                           <div className="d-flex justify-content-between">
-                              <span className="fw-bold text-muted small">TOTAL SCORE:</span>
-                              <span className="fw-bold text-teal">{resSubjects.reduce((acc,curr)=>acc+(Number(curr.mark)||0), 0)}</span>
-                           </div>
-                        </div>
-
-                        <button className="btn btn-teal-primary w-100 py-3 mt-4 fw-bold rounded-pill shadow-sm">
-                           GENERATE & PUBLISH CERTIFICATE
-                        </button>
-                     </form>
-                  </div>
-                </div>
-                <div className="col-md-7">
-                  <div className="card border-0 shadow-sm rounded-4 p-4">
-                     <h5 className="fw-bold mb-4 text-secondary">PUBLISHED RESULTS LOG</h5>
+                   ) : (
                      <div className="table-responsive">
-                        <table className="table table-hover align-middle">
-                           <thead className="table-light"><tr className="small text-muted"><th>STUDENT</th><th>TYPE</th><th>YEAR</th><th>TOTAL</th><th>GRADE</th></tr></thead>
+                        <table className="table align-middle table-hover">
+                           <thead className="table-light">
+                              <tr><th>Name</th><th>Phone</th><th>Status</th><th>Action</th></tr>
+                           </thead>
                            <tbody>
-                              {results.map(r => (
-                                <tr key={r._id}>
-                                   <td className="fw-bold">{r.student?.studentName}</td>
-                                   <td><span className="badge bg-light text-dark border">{r.examType}</span></td>
-                                   <td>{r.year}</td>
-                                   <td className="fw-bold text-teal">{r.totalMarks}</td>
-                                   <td><span className={`badge ${r.grade.includes('A')?'bg-success':'bg-primary'}`}>{r.grade}</span></td>
+                              {students.map(s => (
+                                <tr key={s._id}>
+                                   <td className="fw-bold">{s.studentName}</td>
+                                   <td>{s.pnone}</td>
+                                   <td><span className={`badge-role badge ${s.status==='approved'?'bg-success text-white':'bg-warning text-dark'}`}>{s.status}</span></td>
+                                   <td><button className="btn btn-sm btn-primary px-3 rounded-pill" onClick={()=>setViewingStudent(s)}>Examine</button></td>
                                 </tr>
                               ))}
                            </tbody>
                         </table>
                      </div>
+                   )}
+                </div>
+              )}
+
+              {activeTab === 'results' && (
+                <div className="row g-4">
+                   <div className="col-md-4">
+                      <div className="modern-card shadow-sm p-4 border h-100">
+                         <h4 className="fw-bold mb-4">Publish Marklist</h4>
+                         <form onSubmit={publishResult}>
+                            <div className="mb-3">
+                               <label className="small fw-bold">Academic Year</label>
+                               <input className="form-control" value={resYear} onChange={e=>setResYear(e.target.value)} required />
+                            </div>
+                            <div className="mb-3">
+                               <label className="small fw-bold">Student Selection</label>
+                               <select className="form-select" value={resStudentId} onChange={e=>setResStudentId(e.target.value)} required>
+                                  <option value="">-- Select Student --</option>
+                                  {students.filter(s=>s.isStudent).map(s=>(
+                                    <option key={s._id} value={s._id}>{s.studentName}</option>
+                                  ))}
+                               </select>
+                            </div>
+                            <div className="mb-3">
+                               <label className="small fw-bold">Exam Category</label>
+                               <select className="form-select" value={resExamType} onChange={e=>setResExamType(e.target.value)}>
+                                  <option value="Midterm">Midterm</option>
+                                  <option value="Final">Final</option>
+                                  <option value="Quarterly">Quarterly</option>
+                               </select>
+                            </div>
+                            <div className="mb-3">
+                               <div className="d-flex justify-content-between mb-2">
+                                  <label className="small fw-bold">Subject Marks</label>
+                                  <button type="button" className="btn btn-xs btn-outline-primary" onClick={addSubjectField}>+ Subject</button>
+                               </div>
+                               {resSubjects.map((sub, idx) => (
+                                 <div key={idx} className="d-flex gap-2 mb-2">
+                                    <input className="form-control" placeholder="Subject" value={sub.subject} onChange={e=>updateSubject(idx, 'subject', e.target.value)} required />
+                                    <input className="form-control" style={{width:80}} placeholder="Mark" type="number" value={sub.mark} onChange={e=>updateSubject(idx, 'mark', e.target.value)} required />
+                                 </div>
+                               ))}
+                            </div>
+                            <button className="btn btn-premium w-100 mt-3">PUBLISH NOW</button>
+                         </form>
+                      </div>
+                   </div>
+                   <div className="col-md-8">
+                      <h4 className="fw-bold mb-4">Published Registry</h4>
+                      <div className="table-responsive">
+                         <table className="table table-hover">
+                            <thead className="table-light">
+                               <tr><th>Student</th><th>Exam</th><th>Total</th><th>Grade</th></tr>
+                            </thead>
+                            <tbody>
+                               {results.map(r => (
+                                 <tr key={r._id}>
+                                    <td className="fw-bold">{r.student?.studentName || "Unknown"}</td>
+                                    <td>{r.examType} ({r.year})</td>
+                                    <td className="fw-bold text-primary">{r.totalMarks}</td>
+                                    <td><span className="badge bg-dark px-3">{r.grade}</span></td>
+                                 </tr>
+                               ))}
+                            </tbody>
+                         </table>
+                      </div>
+                   </div>
+                </div>
+              )}
+
+              {activeTab === 'posters' && (
+                <div>
+                   <h2 className="fw-bold mb-4 text-primary">Admission Posters</h2>
+                   <div className="card border-0 shadow-sm p-4 rounded-4 mb-4 bg-white border">
+                      <form onSubmit={uploadPoster} className="row g-3">
+                        <div className="col-md-5">
+                           <label className="small fw-bold mb-1">POSTER TITLE</label>
+                           <input className="form-control" value={posterTitle} onChange={e=>setPosterTitle(e.target.value)} required />
+                        </div>
+                        <div className="col-md-5">
+                           <label className="small fw-bold mb-1">CHOOSE FILE</label>
+                           <input type="file" className="form-control" onChange={e=>setPosterFile(e.target.files[0])} required />
+                        </div>
+                        <div className="col-md-2 d-flex align-items-end">
+                           <button className="btn btn-premium w-100" disabled={uploadingPoster}>{uploadingPoster?"...":"ADD"}</button>
+                        </div>
+                      </form>
+                   </div>
+                   <div className="row g-4">
+                      {posters.map(p => (
+                        <div className="col-md-4" key={p._id}>
+                           <div className="modern-card p-2 animate-up">
+                              <img src={p.url} className="w-100 rounded-3" style={{height:'350px', objectFit:'contain', background:'#fafafa'}} />
+                              <div className="p-3 d-flex justify-content-between align-items-center">
+                                 <span className="fw-bold">{p.title}</span>
+                                 <button className="btn btn-sm btn-outline-danger px-3 rounded-pill" onClick={()=>deletePoster(p._id)}>Delete</button>
+                              </div>
+                           </div>
+                        </div>
+                      ))}
+                   </div>
+                </div>
+              )}
+
+              {activeTab === 'gallery' && (
+                <div>
+                  <h2 className="fw-bold mb-4">Gallery Management</h2>
+                  <div className="modern-card p-4 mb-4 border shadow-sm">
+                    <form onSubmit={uploadMedia} className="row g-3">
+                      <div className="col-md-5"><label className="small fw-bold mb-1">CAPTION</label><input className="form-control" value={galleryTitle} onChange={e=>setGalleryTitle(e.target.value)} required /></div>
+                      <div className="col-md-5"><label className="small fw-bold mb-1">IMAGE/VIDEO FILE</label><input type="file" className="form-control" onChange={e=>setGalleryFile(e.target.files[0])} required /></div>
+                      <div className="col-md-2 d-flex align-items-end"><button type="submit" className="btn btn-premium w-100" disabled={uploadingMedia}>{uploadingMedia?"...":"UPLOAD"}</button></div>
+                    </form>
+                  </div>
+                  <div className="row g-4">
+                     {galleryItems.map(item => (
+                        <div className="col-md-3" key={item._id}>
+                           <div className="modern-card p-1 shadow-sm h-100 transition-hover">
+                              {item.type==='video'? <video src={item.url} style={{height:180, objectFit:'cover'}} className="w-100 rounded-3" /> : <img src={item.url} style={{height:180, objectFit:'cover'}} className="w-100 rounded-3" />}
+                              <div className="p-2 d-flex justify-content-between align-items-center">
+                                 <span className="small text-truncate fw-bold">{item.title}</span>
+                                 <button className="btn btn-xs text-danger" onClick={()=>deleteGalleryItem(item._id)}><i className="bi bi-trash"></i></button>
+                              </div>
+                           </div>
+                        </div>
+                     ))}
                   </div>
                 </div>
-            </div>
-          )}
+              )}
 
-          {activeTab === 'posters' && (
-            <div>
-               <h2 className="fw-bold mb-4">Admission Posters</h2>
-               <div className="card border-0 shadow-sm p-4 rounded-4 mb-5">
-                  <form onSubmit={uploadPoster} className="row g-3">
-                     <div className="col-md-5">
-                        <label className="small fw-bold">Poster Title</label>
-                        <input className="form-control bg-light" value={posterTitle} onChange={e=>setPosterTitle(e.target.value)} placeholder="e.g. Admission 2026 Poster" required />
-                     </div>
-                     <div className="col-md-5">
-                        <label className="small fw-bold">Choose File</label>
-                        <input type="file" className="form-control bg-light" onChange={e=>setPosterFile(e.target.files[0])} required />
-                     </div>
-                     <div className="col-md-2 d-flex align-items-end">
-                        <button className="btn btn-teal-primary w-100 fw-bold" disabled={uploadingPoster}>{uploadingPoster?"...":"ADD"}</button>
-                     </div>
-                  </form>
-               </div>
-               <div className="row g-4">
-                  {posters.map(p => (
-                    <div className="col-md-4" key={p._id}>
-                       <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
-                          <img src={p.url} className="w-100" style={{height:'300px', objectFit:'contain', background:'#f0f0f0'}} />
-                          <div className="p-3 d-flex justify-content-between align-items-center">
-                             <span className="fw-bold small">{p.title}</span>
-                             <button className="btn btn-sm btn-outline-danger" onClick={()=>deletePoster(p._id)}>Remove</button>
-                          </div>
-                       </div>
-                    </div>
-                  ))}
-               </div>
-            </div>
-          )}
-
-          {activeTab === 'gallery' && (
-            <div>
-              <h2 className="mb-4 fw-bold">Media Repository</h2>
-              <div className="card border-0 shadow-sm p-4 rounded-4 mb-4">
-                <form onSubmit={uploadMedia} className="row g-3">
-                  <div className="col-md-5"><input className="form-control bg-light" placeholder="Event Title" value={galleryTitle} onChange={e=>setGalleryTitle(e.target.value)} required /></div>
-                  <div className="col-md-5"><input type="file" className="form-control bg-light" onChange={e=>setGalleryFile(e.target.files[0])} required /></div>
-                  <div className="col-md-2"><button type="submit" className="btn btn-teal-primary w-100 fw-bold" disabled={uploadingMedia}>{uploadingMedia?"...":"UPLOAD"}</button></div>
-                </form>
-              </div>
-              <div className="row g-3">
-                 {galleryItems.map(item => (
-                    <div className="col-md-3" key={item._id}>
-                       <div className="card border-0 h-100 shadow-sm rounded-4 overflow-hidden">
-                          {item.type==='video'? <video src={item.url} style={{height:150, objectFit:'cover'}} /> : <img src={item.url} style={{height:150, objectFit:'cover'}} />}
-                          <div className="p-2 d-flex justify-content-between">
-                             <span className="small text-truncate">{item.title}</span>
-                             <button className="btn btn-xs btn-outline-danger border-0" onClick={()=>deleteGalleryItem(item._id)}>╳</button>
-                          </div>
-                       </div>
-                    </div>
-                 ))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'notifications' && (
-            <div>
-              <h2 className="mb-4 fw-bold">Live Notices</h2>
-              <div className="card border-0 shadow-sm p-4 rounded-4 mb-4">
-                 <form onSubmit={addNotification} className="row g-2">
-                    <div className="col-md-4"><input className="form-control bg-light" placeholder="Title" value={newNote.title} onChange={e=>setNewNote({...newNote, title:e.target.value})} required /></div>
-                    <div className="col-md-5"><input className="form-control bg-light" placeholder="Message" value={newNote.message} onChange={e=>setNewNote({...newNote, message:e.target.value})} required /></div>
-                    <div className="col-md-3">
-                       <select className="form-select bg-light" value={newNote.type} onChange={e=>setNewNote({...newNote, type:e.target.value})}>
-                          <option value="info">Info</option>
-                          <option value="urgent">Urgent</option>
-                          <option value="result">Result</option>
-                       </select>
-                    </div>
-                    <div className="col-12 mt-3"><button className="btn btn-teal-primary px-5 fw-bold rounded-pill">POST ANNOUNCEMENT</button></div>
-                 </form>
-              </div>
-              {notifications.map(n => (
-                <div key={n._id} className="alert alert-light border-start border-teal border-5 shadow-sm d-flex justify-content-between align-items-center">
-                   <div><strong className="text-teal">{n.title}</strong>: {n.message}</div>
-                   <button className="btn btn-sm btn-link text-danger" onClick={()=>deleteNotification(n._id)}>Delete</button>
+              {activeTab === 'notices' && (
+                <div className="row g-4">
+                   <div className="col-md-5">
+                      <div className="modern-card shadow-sm p-4 border">
+                         <h4 className="fw-bold mb-4">Broadcast Notice</h4>
+                         <div className="mb-3">
+                            <label className="small fw-bold">Notice Title</label>
+                            <input className="form-control" value={newNote.title} onChange={e=>setNewNote({...newNote, title:e.target.value})} required />
+                         </div>
+                         <div className="mb-3">
+                            <label className="small fw-bold">Importance Level</label>
+                            <select className="form-select" value={newNote.type} onChange={e=>setNewNote({...newNote, type:e.target.value})}>
+                               <option value="info">Info</option>
+                               <option value="warning">Warning</option>
+                               <option value="urgent">Urgent</option>
+                            </select>
+                         </div>
+                         <div className="mb-4">
+                            <label className="small fw-bold">Message Content</label>
+                            <textarea className="form-control" rows="4" value={newNote.message} onChange={e=>setNewNote({...newNote, message:e.target.value})} required></textarea>
+                         </div>
+                         <button className="btn btn-premium w-100" onClick={addNotification}>POST NOTICE</button>
+                      </div>
+                   </div>
+                   <div className="col-md-7">
+                      <h4 className="fw-bold mb-4">Live Bulletin</h4>
+                      {notifications.map(n => (
+                        <div key={n._id} className="modern-card p-3 mb-3 border shadow-none bg-light d-flex justify-content-between align-items-center">
+                           <div>
+                              <div className="fw-bold fs-5">{n.title}</div>
+                              <p className="small text-muted mb-0">{n.message}</p>
+                           </div>
+                           <button className="btn btn-sm btn-outline-danger border-0" onClick={()=>deleteNotification(n._id)}><i className="bi bi-x-circle"></i></button>
+                        </div>
+                      ))}
+                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              )}
 
-          {activeTab === 'settings' && (
-            <div style={{maxWidth:600}}>
-              <h2 className="fw-bold mb-4">Admission Config</h2>
-              <div className="card border-0 shadow-sm p-4 rounded-4">
-                 <form onSubmit={updateSetting}>
-                    <div className="form-check form-switch mb-4">
-                       <input className="form-check-input" type="checkbox" checked={admissionActive} onChange={e=>setAdmissionActive(e.target.checked)} />
-                       <label className="fw-bold ms-2">Admissions Open</label>
-                    </div>
-                    <div className="mb-3">
-                       <label className="small fw-bold text-muted">NOTICE MESSAGE</label>
-                       <textarea className="form-control bg-light" value={admissionMsg} onChange={e=>setAdmissionMsg(e.target.value)} rows="3" />
-                    </div>
-                    <div className="mb-4">
-                       <label className="small fw-bold text-muted">CLOSING DEADLINE</label>
-                       <input type="datetime-local" className="form-control bg-light" value={admissionDeadline} onChange={e=>setAdmissionDeadline(e.target.value)} />
-                    </div>
-                    <button className="btn btn-teal-primary w-100 py-3 rounded-pill fw-bold shadow">SAVE SETTINGS</button>
-                 </form>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'security' && (
-            <div style={{maxWidth:400}}>
-              <h2 className="fw-bold mb-4">Security</h2>
-              <div className="card border-0 shadow-sm p-4 rounded-4">
-                 <form onSubmit={changeAdminPassword}>
-                    <div className="mb-4">
-                       <label className="small fw-bold text-muted">NEW PASSWORD</label>
-                       <input type="password" name="password" className="form-control bg-light" value={newPassword} onChange={e=>setNewPassword(e.target.value)} required />
-                    </div>
-                    <button className="btn btn-teal-primary w-100 py-3 rounded-pill fw-bold">UPDATE PASS</button>
-                 </form>
-              </div>
-            </div>
-          )}
+              {activeTab === 'settings' && (
+                <div className="row g-4">
+                   <div className="col-md-6">
+                      <div className="modern-card p-4 border shadow-sm h-100">
+                         <h4 className="fw-bold mb-4 text-primary">Admission Settings</h4>
+                         <div className="form-check form-switch mb-4">
+                            <input className="form-check-input" type="checkbox" checked={admissionActive} onChange={e=>setAdmissionActive(e.target.checked)} id="adActive" />
+                            <label className="form-check-label fw-bold" htmlFor="adActive">Open for New Admissions</label>
+                         </div>
+                         <div className="mb-3">
+                            <label className="small fw-bold">Admission Message</label>
+                            <textarea className="form-control" rows="2" value={admissionMsg} onChange={e=>setAdmissionMsg(e.target.value)}></textarea>
+                         </div>
+                         <div className="mb-4">
+                            <label className="small fw-bold">Auto-Close Deadline</label>
+                            <input type="datetime-local" className="form-control" value={admissionDeadline} onChange={e=>setAdmissionDeadline(e.target.value)} />
+                         </div>
+                         <button className="btn btn-premium w-100 py-3" onClick={updateSetting}>SAVE PORTAL SETTINGS</button>
+                      </div>
+                   </div>
+                   <div className="col-md-6">
+                      <div className="modern-card p-4 border shadow-sm h-100">
+                         <h4 className="fw-bold mb-4 text-danger">Administrative Security</h4>
+                         <form onSubmit={changePassword}>
+                            <div className="mb-4">
+                               <label className="small fw-bold">New Security Key (Password)</label>
+                               <input type="password" placeholder="Min. 6 characters" className="form-control shadow-none" value={newPassword} onChange={e=>setNewPassword(e.target.value)} required />
+                            </div>
+                            <button className="btn btn-danger w-100 py-3 fw-bold">UPDATE ADMIN KEY</button>
+                            {passwordChangeMsg.text && <div className={`mt-3 alert alert-${passwordChangeMsg.type} p-2 small`}>{passwordChangeMsg.text}</div>}
+                         </form>
+                      </div>
+                   </div>
+                </div>
+              )}
+           </div>
         </div>
       </div>
     </div>

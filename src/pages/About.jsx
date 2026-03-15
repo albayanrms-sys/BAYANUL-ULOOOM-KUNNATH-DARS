@@ -2,51 +2,78 @@ import "./About.css";
 
 function About() {
   return (
-    <section className="about-page container py-5">
-      <div className="row justify-content-center">
-        <div className="col-lg-10">
-          <div className="card glass-card p-5 border-0 shadow-lg">
-            <h1 className="text-center mb-5 brand-title-text">ഞങ്ങളെക്കുറിച്ച് <br/><span className="sub-title fs-5 text-muted">ABOUT US</span></h1>
-            
-            <div className="row g-5 align-items-center">
-              <div className="col-md-6 order-md-2">
-                <div className="about-image-wrapper">
-                  <img src="/dars_building.jpg" alt="About Bayanul Uloom Dars" className="img-fluid rounded-4 shadow-sm grayscale-hover" />
-                </div>
-              </div>
-              <div className="col-md-6 order-md-1">
-                <h3 className="section-title mb-3">ബായനുൽ ഉലൂം ദർസ് കുന്നത്ത്</h3>
-                <p className="lead fs-5 text-dark opacity-90 mb-4">
-                  ഇസ്ലാമിക പാരമ്പര്യവും ആധുനിക വിദ്യാഭ്യാസ രീതികളും കൂട്ടിയിണക്കി വിദ്യാർത്ഥികളെ ഉൽകൃഷ്ടമായ ഭാവിയിലേക്ക് നയിക്കുന്ന ഒരു ഉത്തമ വിദ്യാലയം.
-                </p>
-                <div className="feature-list list-group list-group-flush opacity-80 border-0">
-                  <div className="list-group-item bg-transparent border-0 px-0 d-flex gap-2">
-                    <span className="text-teal fs-4">✓</span>
-                    <span>പരമ്പരാഗത ദർസ് പഠനരീതി</span>
-                  </div>
-                  <div className="list-group-item bg-transparent border-0 px-0 d-flex gap-2">
-                    <span className="text-teal fs-4">✓</span>
-                    <span>ഉന്നത യോഗ്യതയുള്ള ഉസ്താദുമാർ</span>
-                  </div>
-                  <div className="list-group-item bg-transparent border-0 px-0 d-flex gap-2">
-                    <span className="text-teal fs-4">✓</span>
-                    <span>മാതൃകാപരമായ അച്ചടക്കവും സംസ്കാരവും</span>
-                  </div>
-                  <div className="list-group-item bg-transparent border-0 px-0 d-flex gap-2">
-                    <span className="text-teal fs-4">✓</span>
-                    <span>വിശാലമായ ലൈബ്രറി സന്ദർശനം</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+    <section className="about-page min-vh-100 py-5 bg-light">
+      <div className="container">
+        <div className="section-header">
+           <h2>ഞങ്ങളെക്കുറിച്ച്</h2>
+           <div className="divider"></div>
+           <p className="text-muted">ROOTED IN TRADITION, REACHING FOR THE FUTURE</p>
+        </div>
 
-            <div className="mt-5 pt-5 text-center border-top-teal">
-              <h4 className="mb-4">ഞങ്ങളുടെ ലക്ഷ്യം <br/><span className="text-muted small">OUR MISSION</span></h4>
-              <p className="px-lg-5 fs-6 text-muted lh-lg">
-                വിദ്യാർത്ഥികളിൽ വിജ്ഞാനത്തോടൊപ്പം ധർമ്മബോധവും മൂല്യങ്ങളും വളർത്തിയെടുക്കുക എന്നതാണ് ഞങ്ങളുടെ പരമമായ ലക്ഷ്യം. ഓരോ വിദ്യാർത്ഥിയെയും ഒരു നല്ല മനുഷ്യനും സമൂഹത്തിന് ഉപകാരപ്രദമായ വ്യക്തിയുമായി വളർത്താൻ ഞങ്ങൾ പ്രതിജ്ഞാബന്ധരാണ്.
-              </p>
+        <div className="row justify-content-center">
+          <div className="col-lg-10">
+            <div className="modern-card animate-up">
+              <div className="row g-5 align-items-center">
+                <div className="col-md-6 order-md-2">
+                  <div className="position-relative">
+                    <img src="/dars_building.jpg" alt="About Bayanul Uloom Dars" className="img-fluid rounded-5 shadow-lg border border-5 border-white" />
+                    <div className="position-absolute bottom-0 start-0 bg-primary text-white p-4 rounded-5 m-3 shadow-sm d-none d-lg-block">
+                       <h4 className="fw-bold mb-0">25+ Years</h4>
+                       <p className="small mb-0">of Academic Excellence</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-6 order-md-1">
+                  <h3 className="fw-bold mb-3 text-primary">ബായനുൽ ഉലൂം ദർസ് കുന്നത്ത്</h3>
+                  <p className="lead text-dark opacity-90 mb-4 fw-medium">
+                    ഇസ്ലാമിക പാരമ്പര്യവും ആധുനിക വിദ്യാഭ്യാസ രീതികളും കൂട്ടിയിണക്കി വിദ്യാർത്ഥികളെ ഉൽകൃഷ്ടമായ ഭാവിയിലേക്ക് നയിക്കുന്ന ഒരു ഉത്തമ വിദ്യാലയം.
+                  </p>
+                  
+                  <div className="d-grid gap-3">
+                     {[
+                       "പരമ്പരാഗത ദർസ് പഠനരീതി",
+                       "ഉന്നത യോഗ്യതയുള്ള ഉസ്താദുമാർ",
+                       "മാതൃകാപരമായ അച്ചടക്കം",
+                       "വിശാലമായ വിജ്ഞാന ശേഖരം"
+                     ].map((f, i) => (
+                       <div key={i} className="d-flex align-items-center gap-3 p-2">
+                          <i className="bi bi-check-circle-fill text-primary fs-4"></i>
+                          <span className="fw-bold text-secondary">{f}</span>
+                       </div>
+                     ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 pt-5 text-center border-top">
+                <h4 className="fw-bold mb-4">ഞങ്ങളുടെ ലക്ഷ്യം | OUR MISSION</h4>
+                <div className="row justify-content-center">
+                   <div className="col-lg-9">
+                      <p className="text-muted lh-lg fs-5">
+                        വിദ്യാർത്ഥികളിൽ വിജ്ഞാനത്തോടൊപ്പം ധർമ്മബോധവും മൂല്യങ്ങളും വളർത്തിയെടുക്കുക എന്നതാണ് ഞങ്ങളുടെ പരമമായ ലക്ഷ്യം. ഓരോ വിദ്യാർത്ഥിയെയും ഒരു നല്ല മനുഷ്യനും സമൂഹത്തിന് ഉപകാരപ്രദമായ വ്യക്തിയുമായി വളർത്താൻ ഞങ്ങൾ പ്രതിജ്ഞാബന്ധരാണ്.
+                      </p>
+                   </div>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
+
+        {/* Vision Columns */}
+        <div className="row g-4 mt-5">
+           {[
+             { t: "Knowledge", d: "Deep dive into Sharia and modern sciences.", i: "bi-book-half" },
+             { t: "Character", d: "Building moral foundations for life.", i: "bi-heart-fill" },
+             { t: "Leadership", d: "Empowering social leaders of tomorrow.", i: "bi-stars" }
+           ].map((v, i) => (
+             <div className="col-md-4" key={i}>
+                <div className="modern-card p-4 text-center h-100 shadow-sm transition-hover">
+                   <i className={`bi ${v.i} display-5 text-primary mb-3`}></i>
+                   <h5 className="fw-bold">{v.t}</h5>
+                   <p className="text-muted small mb-0">{v.d}</p>
+                </div>
+             </div>
+           ))}
         </div>
       </div>
     </section>

@@ -64,7 +64,7 @@ function Admission() {
       });
       const data = await res.json();
       if (res.ok) {
-        alert("Admission submitted successfully! Your tracking credentials have been generated.");
+        alert("Admission submitted successfully! You will be contacted soon.");
         setFormData({ studentName: "", fatherName: "", motherName: "", dob: "", place: "", address: "", phone: "", previousEdu: "", email: "" });
       } else {
         alert(data.error || "Submission failed");
@@ -74,88 +74,90 @@ function Admission() {
     }
   };
 
-  if (loading) return <div className="text-center py-5">Loading...</div>;
+  if (loading) return (
+    <div className="d-flex align-items-center justify-content-center min-vh-100">
+      <div className="spinner-border text-primary" role="status"></div>
+    </div>
+  );
 
   return (
-    <section className="admission container py-5" style={{fontFamily: 'Inter, sans-serif'}}>
-      <div className="row justify-content-center">
-        <div className="col-lg-8 col-xl-7">
-          {!isAdmissionOpen ? (
-            <div className="card glass-form p-5 text-center shadow-lg border-danger">
-              <span className="display-1">🔒</span>
-              <h2 className="text-danger fw-bold mt-4 mb-3">Admissions Closed</h2>
-              <p className="lead">{admissionStatus.deadline && (new Date(admissionStatus.deadline) <= new Date()) ? "The application deadline has passed." : (admissionStatus.message || "We are not accepting any new applications at this time.")}</p>
-              <a href="/contact" className="btn btn-outline-dark mt-4 px-4 fw-bold">Contact Administration</a>
+    <section className="admission-page min-vh-100 py-5 bg-light">
+      <div className="container">
+        <div className="row justify-content-center">
+          <div className="col-lg-8">
+            <div className="section-header">
+               <h2>Admission Portal 2026</h2>
+               <div className="divider"></div>
+               <p className="text-muted">Start your journey towards excellence today.</p>
             </div>
-          ) : (
-            <div className="card admission-form-card glass-form p-4 shadow-lg border-0 rounded-4">
-              {admissionStatus.deadline && timeLeft !== "EXPIRED" && (
-                <div className="alert alert-danger fw-bold text-center border-0 shadow-sm mb-4">
-                   ⏳ Time Left: {timeLeft}
-                </div>
-              )}
-              {admissionStatus.message && (
-                <div className="alert alert-info fw-bold border-0 shadow-sm mb-4 p-3 bg-light-teal text-teal">
-                  <div className="d-flex align-items-center">
-                    <span className="fs-4 me-3">📝</span>
-                    <div>
-                      <div className="small text-muted text-uppercase fw-bold mb-1">Important Admission Note</div>
-                      <div className="fs-6">{admissionStatus.message}</div>
-                    </div>
+
+            {!isAdmissionOpen ? (
+              <div className="modern-card text-center py-5 animate-up border border-danger">
+                <i className="bi bi-lock-fill display-1 text-danger mb-4"></i>
+                <h2 className="fw-bold text-danger">Registration Closed</h2>
+                <p className="lead px-lg-5">{admissionStatus.message || "We are currently not accepting new applications. Please contact the office for more details."}</p>
+                <a href="/contact" className="btn btn-premium mt-4">CONTACT OFFICE</a>
+              </div>
+            ) : (
+              <div className="modern-card animate-up border-0 shadow-lg p-md-5">
+                {admissionStatus.deadline && timeLeft !== "EXPIRED" && (
+                  <div className="alert alert-warning border-0 rounded-4 d-flex align-items-center mb-4">
+                     <i className="bi bi-clock-history fs-3 me-3"></i>
+                     <div>
+                        <span className="small fw-bold text-uppercase d-block mb-1">Closing Soon</span>
+                        <span className="h5 fw-bold mb-0">{timeLeft}</span>
+                     </div>
                   </div>
-                </div>
-              )}
-              
-              <h2 className="text-center mb-1 fw-bold" style={{color: '#006d77'}}>ADMISSION FORM</h2>
-              <p className="text-center text-muted mb-4 small">Fill up the details below to complete your registration</p>
-              
-              <form onSubmit={handleSubmit}>
-                <div className="row">
-                  <div className="col-md-12 mb-3">
-                    <label className="form-label text-muted small fw-bold px-1">Student Full Name</label>
-                    <input name="studentName" className="form-control p-3 bg-light" placeholder="Student Name" value={formData.studentName} onChange={handleChange} required />
+                )}
+                
+                {admissionStatus.message && (
+                  <div className="bg-primary bg-opacity-10 p-4 rounded-4 mb-5 border-start border-primary border-5">
+                     <h6 className="fw-bold text-primary mb-2">OFFICE NOTE</h6>
+                     <p className="mb-0 small text-dark opacity-75">{admissionStatus.message}</p>
                   </div>
-                </div>
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label text-muted small fw-bold px-1">Father's Name</label>
-                    <input name="fatherName" className="form-control p-3 bg-light" placeholder="Father Name" value={formData.fatherName} onChange={handleChange} required />
+                )}
+
+                <form onSubmit={handleSubmit} className="row g-4">
+                  <div className="col-12">
+                     <label className="fw-bold small text-muted mb-2">STUDENT FULL NAME</label>
+                     <input name="studentName" className="form-control" placeholder="Enter complete name" value={formData.studentName} onChange={handleChange} required />
                   </div>
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label text-muted small fw-bold px-1">Mother's Name</label>
-                    <input name="motherName" className="form-control p-3 bg-light" placeholder="Mother Name" value={formData.motherName} onChange={handleChange} />
+                  <div className="col-md-6">
+                     <label className="fw-bold small text-muted mb-2">FATHER'S NAME</label>
+                     <input name="fatherName" className="form-control" value={formData.fatherName} onChange={handleChange} required />
                   </div>
-                </div>
-                <div className="row">
-                  <div className="col-md-4 mb-3">
-                    <label className="form-label text-muted small fw-bold px-1">Date of Birth</label>
-                    <input type="date" name="dob" className="form-control p-3 bg-light" value={formData.dob} onChange={handleChange} required />
+                  <div className="col-md-6">
+                     <label className="fw-bold small text-muted mb-2">MOTHER'S NAME</label>
+                     <input name="motherName" className="form-control" value={formData.motherName} onChange={handleChange} />
                   </div>
-                  <div className="col-md-4 mb-3">
-                    <label className="form-label text-muted small fw-bold px-1">Mobile Number</label>
-                    <input type="tel" name="phone" className="form-control p-3 bg-light" placeholder="Mobile" value={formData.phone} onChange={handleChange} required />
+                  <div className="col-md-4">
+                     <label className="fw-bold small text-muted mb-2">DATE OF BIRTH</label>
+                     <input type="date" name="dob" className="form-control" value={formData.dob} onChange={handleChange} required />
                   </div>
-                  <div className="col-md-4 mb-3">
-                    <label className="form-label text-muted small fw-bold px-1">Native Place</label>
-                    <input name="place" className="form-control p-3 bg-light" placeholder="Place Name" value={formData.place} onChange={handleChange} />
+                  <div className="col-md-4">
+                     <label className="fw-bold small text-muted mb-2">MOBILE NUMBER</label>
+                     <input type="tel" name="phone" className="form-control" placeholder="+91 XXXX" value={formData.phone} onChange={handleChange} required />
                   </div>
-                </div>
-                <div className="mb-3">
-                  <label className="form-label text-muted small fw-bold px-1">Email Address (Optional)</label>
-                  <input type="email" name="email" className="form-control p-3 bg-light" placeholder="email@example.com" value={formData.email} onChange={handleChange} />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label text-muted small fw-bold px-1">Full Address</label>
-                  <textarea name="address" className="form-control p-3 bg-light" placeholder="Complete address" rows="2" value={formData.address} onChange={handleChange} required />
-                </div>
-                <div className="mb-4">
-                  <label className="form-label text-muted small fw-bold px-1">Previous Education Details</label>
-                  <input name="previousEdu" className="form-control p-3 bg-light" placeholder="Last School / Madrassa attended" value={formData.previousEdu} onChange={handleChange} />
-                </div>
-                <button type="submit" className="btn btn-teal-primary w-100 py-3 fw-bold shadow-sm rounded-pill">SUBMIT APPLICATION</button>
-              </form>
-            </div>
-          )}
+                  <div className="col-md-4">
+                     <label className="fw-bold small text-muted mb-2">NATIVE PLACE</label>
+                     <input name="place" className="form-control" value={formData.place} onChange={handleChange} />
+                  </div>
+                  <div className="col-12">
+                     <label className="fw-bold small text-muted mb-2">PERMANENT ADDRESS</label>
+                     <textarea name="address" className="form-control" rows="3" value={formData.address} onChange={handleChange} required />
+                  </div>
+                  <div className="col-12">
+                     <label className="fw-bold small text-muted mb-2">PREVIOUS EDUCATION</label>
+                     <input name="previousEdu" className="form-control" placeholder="Last school/madrassa name" value={formData.previousEdu} onChange={handleChange} />
+                  </div>
+                  <div className="col-12 pt-3">
+                     <button type="submit" className="btn btn-premium w-100 py-3 fs-5 shadow">SUBMIT FORM</button>
+                     <p className="text-center x-small text-muted mt-3">By submitting, you agree to the terms and standards of Al Bayan Kunnath Dars.</p>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </section>
