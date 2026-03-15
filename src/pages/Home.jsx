@@ -17,27 +17,6 @@ function Home() {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-5 bg-white shadow-sm position-relative" style={{zIndex: 10, marginTop: '-50px'}}>
-        <div className="container">
-          <div className="row g-4 text-center">
-             {[
-               { n: "50+", l: "Students", i: "bi-people" },
-               { n: "10+", l: "Faculty", i: "bi-mortarboard" },
-               { n: "100%", l: "Success", i: "bi-award" },
-               { n: "24/7", l: "Support", i: "bi-shield-check" }
-             ].map((s, idx) => (
-               <div key={idx} className="col-6 col-md-3">
-                  <div className="p-4 rounded-4 transition-hover">
-                     <i className={`bi ${s.i} fs-1 text-teal mb-2 d-block`}></i>
-                     <h3 className="fw-bold mb-0">{s.n}</h3>
-                     <p className="text-muted small mb-0">{s.l}</p>
-                  </div>
-               </div>
-             ))}
-          </div>
-        </div>
-      </section>
 
       {/* About Summary */}
       <section className="py-5 mt-5">
