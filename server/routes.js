@@ -32,13 +32,10 @@ router.post('/login', async (req, res) => {
   
   const trimmedUser = username.trim();
   
-  // Try exact match first (for admin/older accounts)
-  let user = await User.findOne({ username: trimmedUser });
-  
-  // Fallback to case-insensitive if not found
-  if (!user) {
-    user = await User.findOne({ username: { $regex: new RegExp("^" + trimmedUser + "$", "i") } });
-  }
+  // Case-insensitive search
+  const user = await User.findOne({ 
+    username: { $regex: new RegExp("^" + trimmedUser.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "$", "i") } 
+  });
 
   if (!user) return res.status(400).json({ error: 'Invalid credentials' });
   
