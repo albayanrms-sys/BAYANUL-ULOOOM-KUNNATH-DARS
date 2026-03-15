@@ -113,10 +113,9 @@ function StudentLogin() {
       });
       const data = await res.json();
       if (res.ok) {
-        alert("Activation Successful! Now login with your new credentials.");
-        setLoginMode("login");
-        setActivationStep(1);
-        setUsername(actUser);
+        alert("Account Activated Successfully!");
+        localStorage.setItem("studentToken", data.token);
+        setToken(data.token);
       } else {
         alert(data.error || "Activation failed");
       }

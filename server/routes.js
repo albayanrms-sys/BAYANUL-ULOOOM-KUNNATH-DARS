@@ -88,7 +88,17 @@ router.post('/activate-account', async (req, res) => {
     if (profilePhoto) student.profilePhoto = profilePhoto;
     await student.save();
     
-    res.json({ message: 'Account activated successfully! You can now login.' });
+    // Generate token for auto-login
+    const user = await User.findOne({ studentRef: studentId });
+    const token = jwt.sign({ id: user._id, role: user.role, studentRef: user.studentRef }, JWT_SECRET);
+    
+    res.json({ 
+      message: 'Account activated successfully!', 
+      token, 
+      role: user.role, 
+      username: user.username, 
+      studentRef: user.studentRef 
+    });
   } catch (err) {
     res.status(500).json({ error: 'Activation failed' });
   }
