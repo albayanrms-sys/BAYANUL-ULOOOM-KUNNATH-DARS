@@ -7,7 +7,10 @@ import dotenv from 'dotenv';
 import apiRoutes from './routes.js';
 import { User } from './models.js';
 import bcrypt from 'bcryptjs';
+import dns from 'dns';
 import { upload } from './upload.js';
+
+dns.setDefaultResultOrder('ipv4first');
 
 dotenv.config();
 
