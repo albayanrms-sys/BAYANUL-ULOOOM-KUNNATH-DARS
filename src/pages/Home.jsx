@@ -1,6 +1,18 @@
+import { useState, useEffect } from "react";
 import "./Home.css";
 
 function Home() {
+  const [posters, setPosters] = useState([]);
+  
+  useEffect(() => {
+    fetch("/api/posters")
+      .then(res => res.json())
+      .then(data => setPosters(data))
+      .catch(err => console.error("Poster fetch error:", err));
+  }, []);
+
+  const latestPoster = posters.length > 0 ? posters[0] : null;
+
   return (
     <div className="home-container">
       {/* Hero Section */}
@@ -63,7 +75,11 @@ function Home() {
           <div className="row justify-content-center">
             <div className="col-lg-8">
                <div className="modern-card p-2 overflow-hidden shadow-2xl">
-                  <img src="/poster.jpg" alt="Poster" className="img-fluid rounded-4" />
+                  {latestPoster ? (
+                    <img src={latestPoster.url} alt={latestPoster.title} className="img-fluid rounded-4" />
+                  ) : (
+                    <img src="/poster.jpg" alt="Default Poster" className="img-fluid rounded-4" />
+                  )}
                </div>
             </div>
           </div>

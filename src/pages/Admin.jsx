@@ -383,10 +383,31 @@ function Admin() {
                                  <div className="col-md-6"><label className="small text-muted fw-bold">ADDRESS</label><div className="fw-bold">{viewingStudent.address}</div></div>
                               </div>
                               <hr className="my-4"/>
-                              <div className="bg-warning bg-opacity-10 p-4 rounded-4 border border-warning">
+                              <div className="bg-warning bg-opacity-10 p-4 rounded-4 border border-warning mb-4">
                                  <h6 className="fw-bold"><i className="bi bi-pencil-square me-2"></i>Registration Instructions</h6>
                                  <textarea className="form-control mb-3" rows="3" value={adminNote} onChange={e=>setAdminNote(e.target.value)} placeholder="Type notes for the student to see..."></textarea>
                                  <button className="btn btn-warning fw-bold px-4 rounded-pill" onClick={saveAdminNote}>Update Information</button>
+                              </div>
+
+                              <div className="bg-light p-4 rounded-4 border">
+                                 <h6 className="fw-bold mb-3">Verification Documents</h6>
+                                 <div className="row g-2">
+                                    {[
+                                      { label: "AADHAR", url: viewingStudent.aadharFile },
+                                      { label: "SSLC", url: viewingStudent.sslcFile },
+                                      { label: "BIRTH CERT", url: viewingStudent.birthCertFile },
+                                      { label: "T.C", url: viewingStudent.tcFile },
+                                      { label: "MARKLIST", url: viewingStudent.marklistFile },
+                                      { label: "PHOTO", url: viewingStudent.profilePhoto }
+                                    ].map((doc, i) => doc.url && (
+                                      <div key={i} className="col-md-4">
+                                         <div className="p-2 bg-white rounded border d-flex justify-content-between align-items-center">
+                                            <span className="small fw-bold">{doc.label}</span>
+                                            <a href={doc.url} target="_blank" rel="noreferrer" className="btn btn-xs btn-primary p-1 px-2"><i className="bi bi-eye"></i></a>
+                                         </div>
+                                      </div>
+                                    ))}
+                                 </div>
                               </div>
                            </div>
                         </div>
@@ -401,7 +422,7 @@ function Admin() {
                               {students.map(s => (
                                 <tr key={s._id}>
                                    <td className="fw-bold">{s.studentName}</td>
-                                   <td>{s.pnone}</td>
+                                   <td>{s.phone}</td>
                                    <td><span className={`badge-role badge ${s.status==='approved'?'bg-success text-white':'bg-warning text-dark'}`}>{s.status}</span></td>
                                    <td><button className="btn btn-sm btn-primary px-3 rounded-pill" onClick={()=>setViewingStudent(s)}>Examine</button></td>
                                 </tr>

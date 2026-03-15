@@ -49,7 +49,13 @@ router.post('/login', async (req, res) => {
 // Check if student can activate account
 router.post('/check-activation', async (req, res) => {
   const { studentName, phone } = req.body;
-  const student = await Student.findOne({ studentName, phone });
+  const trimmedName = studentName?.trim();
+  const trimmedPhone = phone?.trim();
+  
+  const student = await Student.findOne({ 
+    studentName: { $regex: new RegExp("^" + trimmedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "$", "i") },
+    phone: trimmedPhone 
+  });
   if (!student) return res.status(404).json({ error: 'Candidate not found. Please check name and phone spelling exactly as given in admission.' });
   
   res.json({ 
