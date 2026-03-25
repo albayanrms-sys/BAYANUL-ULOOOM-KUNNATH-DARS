@@ -10,7 +10,7 @@ body { font-family: sans-serif; color: var(--text-main); background-color: #f8fb
 .text-teal { color: var(--primary-teal) !important; }
 .divider { width: 60px; height: 4px; background: var(--primary-teal); margin: 1.5rem auto; }
 .nav-link { 
-  color: rgba(0, 0, 0, 0.7) !important; 
+  color: rgba(0, 0, 0, 0.9) !important; 
   font-weight: 600; 
   transition: all 0.3s ease; 
   position: relative;
