@@ -10,7 +10,7 @@ body { font-family: sans-serif; color: var(--text-main); background-color: #f8fb
 .text-teal { color: var(--primary-teal) !important; }
 .divider { width: 60px; height: 4px; background: var(--primary-teal); margin: 1.5rem auto; }
 .nav-link { 
-  color: #006666 !important; 
+  color: #1a365d !important; 
   font-weight: 700 !important; 
   transition: all 0.3s ease; 
   position: relative;
@@ -19,11 +19,13 @@ body { font-family: sans-serif; color: var(--text-main); background-color: #f8fb
   font-size: 1rem;
 }
 .nav-links .nav-link:hover, .nav-link:hover {
-    color: #008080 !important;
+    color: #3182ce !important;
     transform: translateY(-2px);
+    opacity: 1 !important;
 }
 .nav-links .nav-link.active, .nav-link.active {
-    color: #008080 !important;
+    color: #3182ce !important;
+    opacity: 1 !important;
 }
 .nav-links .nav-link.active::after {
     content: '';
