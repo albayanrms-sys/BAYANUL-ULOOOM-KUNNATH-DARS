@@ -30,7 +30,15 @@ export default function Header() {
           <ul className="navbar-nav ms-auto nav-links gap-lg-2 me-lg-4">
             {navLinks.map((link) => (
               <li key={link.path} className="nav-item">
-                <Link className={`nav-link ${pathname === link.path ? 'active' : ''}`} href={link.path}>
+                <Link 
+                  className={`nav-link ${pathname === link.path ? 'active' : ''}`} 
+                  href={link.path}
+                  style={{ 
+                    color: pathname === link.path ? '#1a365d' : '#2d3748',
+                    fontWeight: '700',
+                    opacity: '1'
+                  }}
+                >
                   {link.name}
                 </Link>
               </li>
