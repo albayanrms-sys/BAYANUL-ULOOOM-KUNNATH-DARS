@@ -1,0 +1,74 @@
+.student-login-page {
+  animation: fadeIn 0.8s ease-in;
+}
+
+.login-card {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 2.5rem;
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease;
+}
+
+.login-logo-wrapper {
+  transform-origin: center;
+}
+
+.animate-bounce {
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.login-title {
+  color: #004e64;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.login-form .form-control {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1.5px solid rgba(0, 109, 119, 0.1);
+  border-radius: 1rem;
+  padding: 0.9rem 1.2rem;
+  font-size: 0.95rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.login-form .form-control:focus {
+  background: #fff;
+  border-color: #008080;
+  box-shadow: 0 0 0 4px rgba(0, 128, 128, 0.1);
+  transform: translateY(-2px);
+}
+
+.login-submit-btn {
+  background: linear-gradient(135deg, #006d77, #004e64);
+  color: #fff;
+  border: none;
+  border-radius: 1rem;
+  transition: all 0.3s ease;
+}
+
+.login-submit-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 109, 119, 0.4);
+  filter: brightness(110%);
+}
+
+.shadow-teal {
+  box-shadow: 0 4px 15px rgba(0, 109, 119, 0.2);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 576px) {
+  .login-card { border-radius: 2rem; padding: 2rem !important; }
+}

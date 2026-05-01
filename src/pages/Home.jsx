@@ -1,21 +1,35 @@
-'use client';
-import { motion } from 'framer-motion';
-import Link from 'next/link';
-export default function Home() {
+import { useState, useEffect } from "react";
+import "./Home.css";
+
+function Home() {
+  const [posters, setPosters] = useState([]);
+  
+  useEffect(() => {
+    fetch("/api/posters")
+      .then(res => res.json())
+      .then(data => setPosters(data))
+      .catch(err => console.error("Poster fetch error:", err));
+  }, []);
+
+  const latestPoster = posters.length > 0 ? posters[0] : null;
+
   return (
     <div className="home-container">
-      <section className="hero-section">
+      {/* Hero Section */}
+      <section className="hero-section d-flex align-items-center">
         <div className="container text-center">
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="glass-card p-5 mx-auto" style={{ maxWidth: '900px' }}>
-            <h1 className="display-3 mb-3 fw-bold text-teal">ബായനുൽ ഉലൂം ദർസ്</h1>
-            <p className="lead mb-4 opacity-75">പരമ്പരാഗത മൂല്യങ്ങളുടെയും ആധുനിക അറിവുകളുടെയും സംഗമഭൂമി. വിദ്യാർത്ഥികളുടെ ഉന്നത വിജയത്തിനായി ഞങ്ങൾ പ്രതിജ്ഞാബദ്ധരാണ്.</p>
+          <div className="hero-content glass-card p-5 animate-up mx-auto">
+            <h1 className="display-3 mb-3">ബായനുൽ ഉലൂം ദർസ്</h1>
+            <p className="lead mb-4 opacity-90">പരമ്പരാഗത മൂല്യങ്ങളുടെയും ആധുനിക അറിവുകളുടെയും സംഗമഭൂമി. വിദ്യാർത്ഥികളുടെ ഉന്നത വിജയത്തിനായി ഞങ്ങൾ പ്രതിജ്ഞാബദ്ധരാണ്.</p>
             <div className="d-flex justify-content-center gap-3">
-              <Link href="/admission" className="btn btn-premium btn-lg px-5">ADMISSION 2026</Link>
-              <Link href="/about" className="btn btn-outline-dark btn-lg px-5 rounded-pill">ABOUT US</Link>
+              <a href="/admission" className="btn btn-premium btn-lg px-5">ADMISSION 2026</a>
+              <a href="/about" className="btn btn-outline-premium btn-lg px-5">LEARN MORE</a>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
+
+
       {/* About Summary */}
       <section className="py-5 mt-5">
         <div className="container">
@@ -23,7 +37,7 @@ export default function Home() {
             <div className="col-md-6 order-2 order-md-1">
               <div className="section-header text-start mb-4">
                 <h2 className="mb-0">പഠന മികവ്, ആത്മീയ ഉന്നതി</h2>
-                <div className="divider ms-0" style={{ width: '60px', height: '4px', background: '#008080' }}></div>
+                <div className="divider ms-0"></div>
               </div>
               <p className="text-muted mb-4 lead">
                 കുന്നത്ത് മഹല്ലിന്റെ തണലിൽ പ്രവർത്തിക്കുന്ന ഈ സ്ഥാപനം ദീർഘകാലമായി മത-ഭൗതിക വിജ്ഞാന രംഗത്ത് മികച്ച സേവനം കാഴ്ചവച്ചു വരുന്നു. 
@@ -40,7 +54,7 @@ export default function Home() {
                    </div>
                  ))}
               </div>
-              <Link href="/about" className="btn btn-premium rounded-pill px-4">READ OUR HISTORY</Link>
+              <a href="/about" className="btn btn-premium rounded-pill px-4">READ OUR HISTORY</a>
             </div>
             <div className="col-md-6 order-1 order-md-2">
               <div className="rounded-5 overflow-hidden shadow-lg border border-5 border-white">
@@ -55,13 +69,17 @@ export default function Home() {
       <section className="py-5 bg-white">
         <div className="container text-center">
           <div className="section-header">
-            <h2 className="fw-bold">അഡ്മിഷൻ അറിയിപ്പുകൾ</h2>
-            <div className="divider" style={{ width: '60px', height: '4px', background: '#008080', margin: '1.5rem auto' }}></div>
+            <h2>അഡ്മിഷൻ അറിയിപ്പുകൾ</h2>
+            <div className="divider"></div>
           </div>
           <div className="row justify-content-center">
             <div className="col-lg-8">
-               <div className="modern-card p-2 overflow-hidden" style={{ borderRadius: '24px', border: '1px solid #f0f0f0', backgroundColor: '#fff', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
-                  <img src="/poster.jpg" alt="Default Poster" className="img-fluid rounded-4 w-100" />
+               <div className="modern-card p-2 overflow-hidden shadow-2xl">
+                  {latestPoster ? (
+                    <img src={latestPoster.url} alt={latestPoster.title} className="img-fluid rounded-4" />
+                  ) : (
+                    <img src="/poster.jpg" alt="Default Poster" className="img-fluid rounded-4" />
+                  )}
                </div>
             </div>
           </div>
@@ -70,3 +88,5 @@ export default function Home() {
     </div>
   );
 }
+
+export default Home;
