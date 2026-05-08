@@ -1,40 +1,115 @@
 @import 'bootstrap/dist/css/bootstrap.min.css';
 @import 'bootstrap-icons/font/bootstrap-icons.css';
-:root { --primary-teal: #008080; --primary-teal-dark: #006666; --text-main: #1a1a1a; }
-body { font-family: sans-serif; color: var(--text-main); background-color: #f8fbfa; }
-.glass-nav { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(15px); border-bottom: 1px solid rgba(255,255,255,0.3); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); }
-.glass-card { background: white; border-radius: 2rem; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04); }
-.btn-premium { background: var(--primary-teal); color: white; border: none; padding: 0.8rem 2rem; border-radius: 100px; font-weight: 700; transition: all 0.3s; }
-.btn-premium:hover { background: var(--primary-teal-dark); transform: translateY(-2px); }
-.btn-teal-solid { background: var(--primary-teal); color: white !important; border-radius: 100px; }
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root { 
+  --primary-teal: #00766c; 
+  --primary-teal-dark: #004d40; 
+  --text-main: #1e293b;
+  --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+body { 
+  font-family: 'Plus Jakarta Sans', sans-serif; 
+  color: var(--text-main); 
+  background: var(--bg-gradient); 
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.glass-nav { 
+  background: rgba(255, 255, 255, 0.7); 
+  backdrop-filter: blur(20px); 
+  border-bottom: 1px solid rgba(255,255,255,0.4); 
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05); 
+}
+
+.glass-card { 
+  background: rgba(255, 255, 255, 0.6); 
+  backdrop-filter: blur(16px); 
+  border: 1px solid rgba(255, 255, 255, 0.5); 
+  border-radius: 1.5rem; 
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08); 
+}
+
+.btn-premium { 
+  background: linear-gradient(135deg, var(--primary-teal), var(--primary-teal-dark)); 
+  color: white; 
+  border: none; 
+  padding: 0.8rem 2.5rem; 
+  border-radius: 50px; 
+  font-weight: 700; 
+  letter-spacing: 0.5px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+  box-shadow: 0 4px 15px rgba(0, 118, 108, 0.3);
+}
+
+.btn-premium:hover { 
+  color: white;
+  transform: translateY(-3px) scale(1.02); 
+  box-shadow: 0 8px 25px rgba(0, 118, 108, 0.4);
+}
+
+.btn-teal-solid { 
+  background: var(--primary-teal); 
+  color: white !important; 
+  border-radius: 50px; 
+  padding: 0.6rem 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-teal-solid:hover {
+  background: var(--primary-teal-dark);
+  box-shadow: 0 4px 12px rgba(0, 118, 108, 0.3);
+}
+
 .text-teal { color: var(--primary-teal) !important; }
-.divider { width: 60px; height: 4px; background: var(--primary-teal); margin: 1.5rem auto; }
+.divider { width: 80px; height: 5px; background: linear-gradient(90deg, var(--primary-teal), transparent); margin: 1.5rem auto; border-radius: 5px; }
+
 .nav-link { 
-  color: #1a365d !important; 
-  font-weight: 700 !important; 
+  color: #334155 !important; 
+  font-weight: 600 !important; 
   transition: all 0.3s ease; 
   position: relative;
   padding-bottom: 5px;
-  opacity: 1 !important;
-  font-size: 1rem;
 }
+
 .nav-links .nav-link:hover, .nav-link:hover {
-    color: #3182ce !important;
+    color: var(--primary-teal) !important;
     transform: translateY(-2px);
-    opacity: 1 !important;
 }
+
 .nav-links .nav-link.active, .nav-link.active {
-    color: #3182ce !important;
-    opacity: 1 !important;
+    color: var(--primary-teal) !important;
 }
+
 .nav-links .nav-link.active::after {
     content: '';
     position: absolute;
-    bottom: 0;
+    bottom: -2px;
     left: 20%;
     width: 60%;
-    height: 2px;
-    background-color: #008080;
+    height: 3px;
+    background: var(--primary-teal);
+    border-radius: 5px;
 }
-.modern-card { background: #ffffff; border-radius: 24px; border: 1px solid #f0f0f0; transition: all 0.3s; }
-.hero-section { min-height: 85vh; display: flex; align-items: center; }
+
+.modern-card { 
+  background: white; 
+  border-radius: 24px; 
+  border: 1px solid rgba(0,0,0,0.05); 
+  box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+  transition: all 0.4s ease; 
+}
+
+.modern-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+}
+
+.hero-section { 
+  min-height: 90vh; 
+  display: flex; 
+  align-items: center; 
+  background: radial-gradient(circle at top right, rgba(0, 118, 108, 0.05), transparent 40%);
+}
