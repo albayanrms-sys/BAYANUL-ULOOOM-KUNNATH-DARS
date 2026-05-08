@@ -2,7 +2,13 @@ import { useState, useEffect } from "react";
 import "./Admin.css";
 
 function Admin() {
-  const [token, setToken] = useState(localStorage.getItem('adminToken'));
+  const [token, setToken] = useState(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setToken(localStorage.getItem('adminToken'));
+    }
+  }, []);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   

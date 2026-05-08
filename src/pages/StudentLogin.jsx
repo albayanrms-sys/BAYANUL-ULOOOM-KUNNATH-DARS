@@ -4,7 +4,13 @@ import "jspdf-autotable";
 import "./StudentLogin.css";
 
 function StudentLogin() {
-  const [token, setToken] = useState(localStorage.getItem('studentToken'));
+  const [token, setToken] = useState(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setToken(localStorage.getItem('studentToken'));
+    }
+  }, []);
   const [loginMode, setLoginMode] = useState("login"); // 'login' or 'activate'
   
   // Login States
